@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CSS Variables — sesuai design.md §2
+   Dipakai untuk kasus yang butuh CSS variable murni (misal inline style,
+   atau di luar konteks Tailwind class). Untuk styling komponen sehari-hari,
+   utamakan Tailwind class dari tailwind.config.ts (mis. bg-blue, text-red).
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Primary — Biru Elektrik (light mode) */
+  --blue: #2563EB;
+  --blue-hover: #1D4ED8;
+  --blue-subtle: #EFF6FF;
+
+  /* Accent — Merah tipis (HANYA dekoratif — lihat design.md §2 & §13) */
+  --red: #EF4444;
+  --red-subtle: #FEF2F2;
+
+  /* Background & Surface */
+  --bg: #FFFFFF;
+  --surface: #F8FAFC;
+  --surface-2: #F1F5F9;
+
+  /* Teks */
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+
+  /* Border */
+  --border: #E5E7EB;
+  --border-focus: var(--blue);
+
+  /* Status */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: var(--red);
+  --info: var(--blue);
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+  --shadow-blue: 0 4px 16px rgba(37,99,235,0.25);
+}
+
+.dark {
+  /* Primary — Biru Elektrik (dark mode, lebih terang agar kontras di navy) */
+  --blue: #3B82F6;
+  --blue-hover: #60A5FA;
+  --blue-subtle: #1E3A5F;
+
+  /* Accent — Merah tipis (dark mode) */
+  --red: #EF4444;
+  --red-subtle: #3B0E0E;
+
+  /* Background & Surface */
+  --bg: #0F172A;
+  --surface: #1E293B;
+  --surface-2: #263449;
+
+  /* Teks */
+  --text-primary: #F9FAFB;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Border */
+  --border: #334155;
+
+  /* Shadow — opacity dikurangi ~50% di dark mode, lihat design.md §6 */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.02);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.03);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Base Styles
+   ───────────────────────────────────────────────────────────────────────── */
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Transisi halus saat toggle dark/light — lihat design.md §8 */
+body,
+body * {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+/* Dot grid background — HANYA dipakai di landing page, lihat design.md §9 */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.5;
+}
+
+/* Scrollbar tipis, konsisten di kedua mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
