@@ -1,0 +1,14 @@
+name = "tepi"
+main = ".open-next/worker.js"
+compatibility_date = "2026-07-03"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tepi-db"
+# Ganti nilai ini setelah membuat D1 database di Cloudflare dashboard
+database_id = "GANTI-SETELAH-BUAT-D1"
