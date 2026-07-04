@@ -12,41 +12,18 @@ export default async function HomePage({
   return <HomePageContent />
 }
 
-// Komponen terpisah agar useTranslations bisa dipanggil di Client Component jika perlu
 function HomePageContent() {
   const t = useTranslations('HomePage')
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'system-ui, sans-serif',
-        padding: '2rem',
-        textAlign: 'center',
-        background: '#f9f9f9',
-      }}
-    >
-      <h1 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '1rem' }}>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-bg p-8 text-center dark:bg-bg-dark">
+      <h1 className="font-heading text-4xl font-extrabold text-text-primary dark:text-text-primary-dark">
         {t('title')}
       </h1>
-      <p style={{ fontSize: '1.125rem', color: '#555', maxWidth: '480px' }}>
+      <p className="mt-4 max-w-[480px] text-lg text-text-secondary dark:text-text-secondary-dark">
         {t('description')}
       </p>
-      <p
-        style={{
-          marginTop: '3rem',
-          fontSize: '0.875rem',
-          color: '#aaa',
-          background: '#fff',
-          border: '1px solid #eee',
-          borderRadius: '8px',
-          padding: '0.75rem 1.5rem',
-        }}
-      >
+      <p className="mt-12 rounded-md border border-border bg-surface px-6 py-3 text-sm text-text-muted dark:border-border-dark dark:bg-surface-dark dark:text-text-muted-dark">
         🚧 {t('wip')}
       </p>
     </main>
