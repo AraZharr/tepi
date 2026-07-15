@@ -1,5 +1,5 @@
 -- Migration 0009 — complete
--- Posts, contact messages, site settings, user role, abuse reports, rate limits, expiry notifications
+-- Posts, contact messages, site settings, user role, abuse reports, rate limits, expiry notifications, payments update
 
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,3 +75,4 @@ CREATE TABLE IF NOT EXISTS expiry_notifications (
 
 ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
 ALTER TABLE users ADD COLUMN subdomain_limit INTEGER DEFAULT 2;
+ALTER TABLE payments ADD COLUMN invoice_number TEXT UNIQUE;

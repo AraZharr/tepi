@@ -5,7 +5,14 @@ import { getDB } from '@/lib/db'
 const guard = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id !== process.env.ADMIN_USER_ID) throw new Error('Forbidden')
+  if (!user) throw new Error('Forbidden')
+  let isAdmin = user.id === process.env.ADMIN_USER_ID
+  if (!isAdmin) {
+    const db = await getDB()
+    const r = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
+    isAdmin = r?.role === 'admin'
+  }
+  if (!isAdmin) throw new Error('Forbidden')
   return user
 }
 
@@ -14,7 +21,10 @@ export async function GET() {
 
   const db = await getDB()
   const payments = await db.prepare(
-    'SELECT * FROM payments ORDER BY created_at DESC LIMIT 100'
+    `SELECT p.*, s.name as subdomain_name
+     FROM payments p
+     LEFT JOIN subdomains s ON s.id = p.subdomain_id
+     ORDER BY p.created_at DESC LIMIT 100`
   ).all()
 
   // Stats

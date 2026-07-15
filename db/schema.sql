@@ -66,10 +66,9 @@ CREATE TABLE IF NOT EXISTS payments (
   payment_method         TEXT DEFAULT 'QRIS',
   status                 TEXT DEFAULT 'pending', -- pending | success | failed | cancelled (mengikuti vocabulary Paywuz)
   paid_at                TEXT,
-  created_at             TEXT DEFAULT (datetime('now'))
+  created_at             TEXT DEFAULT (datetime('now')),
+  invoice_number         TEXT UNIQUE
 );
-
--- Audit log semua aksi penting
 CREATE TABLE IF NOT EXISTS activity_logs (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    TEXT,

@@ -108,6 +108,7 @@ export default function DashboardPage() {
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">tepi.my.id</h1>
         <div className="flex items-center gap-3">
           <a href="/pricing" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Harga</a>
+          <a href="/dashboard/invoices" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Invoice</a>
           <span className="text-sm text-text-secondary dark:text-text-secondary-dark">{user?.email}</span>
           <Button variant="secondary" onClick={handleLogout} className="px-3 py-1 text-sm">Keluar</Button>
         </div>

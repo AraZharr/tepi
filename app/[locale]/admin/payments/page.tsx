@@ -43,8 +43,18 @@ export default function AdminPaymentsPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left text-text-muted"><th className="pb-2 pr-4">ID</th><th className="pb-2 pr-4">Amount</th><th className="pb-2 pr-4">Status</th><th className="pb-2">Date</th></tr></thead>
-            <tbody>{data.payments?.map((p: any) => <tr key={p.id} className="border-b border-border/50"><td className="py-2 pr-4 font-mono text-xs">{p.id?.slice(0, 16)}...</td><td className="py-2 pr-4">Rp {p.amount?.toLocaleString()}</td><td className="py-2 pr-4"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.status === 'success' ? 'bg-green-50 text-green-700' : p.status === 'pending' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>{p.status}</span></td><td className="py-2 text-text-muted">{p.created_at}</td></tr>)}</tbody>
+            <thead><tr className="border-b border-border text-left text-text-muted"><th className="pb-2 pr-4">Invoice</th><th className="pb-2 pr-4">Subdomain</th><th className="pb-2 pr-4">Amount</th><th className="pb-2 pr-4">Status</th><th className="pb-2">Date</th></tr></thead>
+            <tbody>{data.payments?.map((p: any) => <tr key={p.id} className="border-b border-border/50">
+              <td className="py-2 pr-4 font-mono text-xs">
+                {p.invoice_number ?
+                  <a href={`/dashboard/invoices/${p.invoice_number}`} className="text-blue hover:underline">{p.invoice_number}</a>
+                  : <span className="text-text-muted">—</span>}
+              </td>
+              <td className="py-2 pr-4 text-xs">{p.subdomain_name || '—'}</td>
+              <td className="py-2 pr-4">Rp {p.amount?.toLocaleString()}</td>
+              <td className="py-2 pr-4"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.status === 'success' ? 'bg-green-50 text-green-700' : p.status === 'pending' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>{p.status}</span></td>
+              <td className="py-2 text-text-muted">{p.created_at}</td>
+            </tr>)}</tbody>
           </table>
         </div>
       </div>
