@@ -1,0 +1,21 @@
+name: Expiry Cron
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Setiap hari jam 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call expiry cron
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://tepi.my.id/api/cron/expiry?key=${{ secrets.CRON_SECRET }}")
+          echo "Cron status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Cron failed"
+            exit 1
+          fi
+          echo "✅ Expiry cron executed"
