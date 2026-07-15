@@ -122,7 +122,15 @@ export default function DashboardPage() {
             </Card>
           ) : (
             <div className="grid gap-3">
-              {data.subdomains.map((s) => (
+              {data.subdomains.map((s) => {
+                let remaining = ''
+                if (s.expires_at) {
+                  const exp = new Date(s.expires_at + 'Z')
+                  const now = new Date()
+                  const days = Math.max(0, Math.floor((exp.getTime() - now.getTime()) / 86400000))
+                  remaining = days === 0 ? 'Hari ini' : `${days} hari lagi`
+                }
+                return (
                 <Card key={s.id} hover={false} className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-text-primary dark:text-text-primary-dark">
@@ -131,12 +139,18 @@ export default function DashboardPage() {
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
                       → {s.target_value} ({s.target_type}) · {s.plan}
                     </p>
+                    {remaining && <p className="text-xs text-text-muted mt-0.5">Berlaku: {remaining}</p>}
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
-                    {STATUS_MAP[s.status]?.label || s.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
+                      {STATUS_MAP[s.status]?.label || s.status}
+                    </span>
+                    {s.status === 'active' && (
+                      <Button variant="secondary" className="px-3 py-1 text-xs">Perpanjang</Button>
+                    )}
+                  </div>
                 </Card>
-              ))}
+              )})}
             </div>
           )}
         </section>

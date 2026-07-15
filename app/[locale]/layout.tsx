@@ -5,10 +5,10 @@ import { getMessages, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { ThemeInitializer } from '@/components/ThemeInitializer'
+import Footer from '@/components/Footer'
 import '../globals.css'
 import ChatWidget from '@/components/ChatWidget'
 
-// Font sesuai design.md §3 — HANYA dua font ini yang boleh dipakai di seluruh app
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['700', '800'],
@@ -30,6 +30,12 @@ export const metadata: Metadata = {
   },
   description:
     'Dapatkan subdomain .tepi.my.id gratis untuk project kamu. GitHub Pages, Vercel, Cloudflare Pages, VPS — semua didukung.',
+  openGraph: {
+    title: 'tepi.my.id — Free Subdomain for Indonesia',
+    description: 'Dapatkan subdomain .tepi.my.id gratis untuk project kamu.',
+    type: 'website',
+    siteName: 'tepi.my.id',
+  },
 }
 
 export function generateStaticParams() {
@@ -45,15 +51,11 @@ export default async function LocaleLayout({
 }) {
   const { locale } = await params
 
-  // Validasi locale — redirect ke 404 kalau tidak dikenal
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound()
   }
 
-  // Aktifkan static rendering untuk locale ini
   setRequestLocale(locale)
-
-  // Muat pesan terjemahan untuk locale saat ini
   const messages = await getMessages()
 
   return (
@@ -64,6 +66,7 @@ export default async function LocaleLayout({
       <body className="font-body">
         <NextIntlClientProvider messages={messages}>
           {children}
+          <Footer locale={locale} />
           <ChatWidget />
         </NextIntlClientProvider>
       </body>
