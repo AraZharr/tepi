@@ -5,6 +5,7 @@ import { validateSubdomainName, validateTargetURL } from '@/lib/validators'
 import { isReserved } from '@/lib/reserved'
 import { autoScanSubdomain } from '@/lib/auto-scan'
 import { verifyTurnstile } from '@/lib/turnstile'
+import { notifNewApplication } from '@/lib/admin-notif'
 
 export async function GET() {
   const supabase = await createClient()
@@ -120,6 +121,15 @@ export async function POST(req: Request) {
     linkedin_link || null,
     social_link || null,
   ).run()
+
+  // Push notif admin
+  notifNewApplication(
+    user.user_metadata?.full_name as string || user.email?.split('@')[0] || user.id,
+    user.email || '',
+    subdomain_name,
+    project_description,
+    0,
+  )
 
   // Log activity
   await db.prepare(

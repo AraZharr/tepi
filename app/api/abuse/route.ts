@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
+import { notifAbuseReport } from '@/lib/admin-notif'
 
 export async function POST(req: Request) {
   const body = await req.json()
@@ -17,6 +18,9 @@ export async function POST(req: Request) {
   await db.prepare(
     `INSERT INTO abuse_reports (subdomain_name, reporter_email, reason) VALUES (?, ?, ?)`
   ).bind(subdomain_name, reporter_email || null, reason).run()
+
+  // Push notif admin
+  notifAbuseReport(subdomain_name, reporter_email || 'Anonymous', reason)
 
   return NextResponse.json({ success: true, message: 'Laporan terkirim. Terima kasih!' })
 }

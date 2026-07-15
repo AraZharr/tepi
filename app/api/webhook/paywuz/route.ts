@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { sendEmail, emailPaymentSuccess } from '@/lib/resend'
-import { createDNSRecord } from '@/lib/cloudflare-dns'
+import { notifPaymentSuccess } from '@/lib/admin-notif'
 
 /**
  * Paywuz Webhook — dipanggil Paywuz setelah pembayaran sukses/gagal
@@ -64,6 +64,15 @@ export async function POST(req: Request) {
               `${subdomain.name as string}.tepi.my.id`
             ))
           } catch { /* email optional */ }
+
+          // Push notif admin
+          notifPaymentSuccess(
+            `${subdomain.name as string}.tepi.my.id`,
+            (subdomain.full_name as string) || (subdomain.email as string) || 'User',
+            payment.amount as number || 5000,
+            payment.invoice_number as string || order_id,
+            expiresAt,
+          )
         }
       }
     }
