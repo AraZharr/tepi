@@ -1,98 +1,80 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
+import Link from 'next/link'
+import TurnstileWidget from '@/components/TurnstileWidget'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const router = useRouter()
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!turnstileToken) { setError('Verifikasi CAPTCHA diperlukan'); return }
     setError(null)
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password })
 
     setLoading(false)
-    if (error) {
-      setError(error.message)
-      return
-    }
-
+    if (authErr) { setError(authErr.message); return }
     router.push('/dashboard')
-    router.refresh()
   }
 
   async function handleGoogleLogin() {
     const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
+    await supabase.auth.signInWithOAuth({ provider: 'google' })
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 dark:bg-bg-dark">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-bg p-8 shadow-md dark:border-border-dark dark:bg-surface-dark">
-        <h1 className="font-heading text-2xl font-bold text-text-primary dark:text-text-primary-dark">
-          Masuk ke tepi.my.id
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-bg dark:bg-bg-dark px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="font-heading text-2xl font-extrabold text-center mb-1 text-text-primary dark:text-text-primary-dark">Masuk</h1>
+        <p className="text-sm text-center text-text-secondary mb-6">Login ke dashboard tepi.my.id</p>
 
-        <form onSubmit={handleLogin} className="mt-6 flex flex-col gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
-            />
-          </div>
-
-          {error && <p className="text-sm text-red">{error}</p>}
-
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Memproses...' : 'Masuk'}
+        <div className="grid gap-4">
+          <Button variant="secondary" onClick={handleGoogleLogin} className="w-full">
+            Lanjut dengan Google
           </Button>
-        </form>
 
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-border dark:bg-border-dark" />
-          <span className="text-xs text-text-muted dark:text-text-muted-dark">atau</span>
-          <div className="h-px flex-1 bg-border dark:bg-border-dark" />
+          <div className="flex items-center gap-3 text-text-muted text-xs">
+            <hr className="flex-1 border-border dark:border-border-dark" />
+            <span>atau</span>
+            <hr className="flex-1 border-border dark:border-border-dark" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Email</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Password</label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark" />
+            </div>
+
+            <TurnstileWidget onVerify={setTurnstileToken} />
+
+            {error && <p className="text-sm text-red">{error}</p>}
+
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Memproses...' : 'Masuk'}
+            </Button>
+          </form>
         </div>
 
-        <Button variant="secondary" onClick={handleGoogleLogin} className="w-full">
-          Masuk dengan Google
-        </Button>
-
-        <p className="mt-6 text-center text-sm text-text-secondary dark:text-text-secondary-dark">
-          Belum punya akun?{' '}
-          <a href="/register" className="text-blue hover:underline dark:text-blue-dark">
-            Daftar
-          </a>
+        <p className="mt-6 text-center text-sm text-text-muted">
+          Belum punya akun? <Link href="/register" className="text-blue hover:underline">Daftar</Link>
         </p>
       </div>
     </main>

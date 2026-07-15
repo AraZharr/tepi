@@ -1,5 +1,5 @@
--- 0009_posts.sql
--- Blog / testimonial posts table
+-- Migration 0009 — complete
+-- Posts, contact messages, site settings, user role, abuse reports, rate limits, expiry notifications
 
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -9,18 +9,15 @@ CREATE TABLE IF NOT EXISTS posts (
   excerpt TEXT,
   cover_image TEXT,
   author_name TEXT DEFAULT 'tepi.my.id',
-  tags TEXT, -- comma-separated
+  tags TEXT,
   is_featured INTEGER DEFAULT 0,
   is_published INTEGER DEFAULT 0,
   published_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT
 );
-
 CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(is_published, published_at);
-
--- 0010_contact_messages.sql
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,15 +29,11 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- 0011_site_settings.sql
-
 CREATE TABLE IF NOT EXISTS site_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_at TEXT
 );
-
--- Default settings
 INSERT OR IGNORE INTO site_settings (key, value) VALUES
   ('site_name', 'tepi.my.id'),
   ('site_description', 'Free subdomain for Indonesian developers'),
@@ -56,3 +49,29 @@ INSERT OR IGNORE INTO site_settings (key, value) VALUES
   ('wa_number', '6281234567890'),
   ('og_image_default', '/og-default.png'),
   ('footer_text', '© 2025 tepi.my.id — Free subdomain for developers Indonesia');
+
+CREATE TABLE IF NOT EXISTS abuse_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subdomain_name TEXT NOT NULL,
+  reporter_email TEXT,
+  reason TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_abuse_reports_status ON abuse_reports(status);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER DEFAULT 1,
+  reset_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS expiry_notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subdomain_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  sent_at TEXT DEFAULT (datetime('now'))
+);
+
+ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
+ALTER TABLE users ADD COLUMN subdomain_limit INTEGER DEFAULT 2;

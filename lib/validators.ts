@@ -3,6 +3,8 @@
  * Dipakai di client (form) maupun server (API route).
  */
 
+import { isReserved } from './reserved'
+
 const BLACKLIST = new Set([
   // Sistem & infrastruktur
   'www', 'api', 'admin', 'mail', 'ftp', 'smtp', 'pop', 'imap', 'ns', 'ns1', 'ns2',
@@ -66,6 +68,10 @@ export function validateSubdomainName(name: string): ValidationResult {
   }
 
   if (BLACKLIST.has(trimmed)) {
+    return { valid: false, error: 'Nama ini tidak tersedia.' }
+  }
+
+  if (isReserved(trimmed)) {
     return { valid: false, error: 'Nama ini tidak tersedia.' }
   }
 

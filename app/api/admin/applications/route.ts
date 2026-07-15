@@ -2,10 +2,21 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getDB } from '@/lib/db'
 
+async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  if (user.id === process.env.ADMIN_USER_ID) return true // fallback
+  try {
+    const db = await getDB()
+    const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
+    return record?.role === 'admin'
+  } catch { return false }
+}
+
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id !== process.env.ADMIN_USER_ID) {
+  if (!(await isAdmin(supabase))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

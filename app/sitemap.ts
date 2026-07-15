@@ -22,10 +22,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, lastModified: new Date(), changeFrequency: 'weekly', priority: 1.0 },
     { url: `${base}/login`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${base}/register`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/pricing`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${base}/report`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${base}/en`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${base}/en/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${base}/en/pricing`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${base}/en/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     ...blogUrls,
   ]

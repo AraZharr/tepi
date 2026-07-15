@@ -7,13 +7,17 @@ import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id !== process.env.ADMIN_USER_ID) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { id } = await params
-  const body = await req.json()
-  const { status, reject_reason } = body
+  let isAdmin = user.id === process.env.ADMIN_USER_ID
+  if (!isAdmin) {
+    try {
+      const db = await getDB()
+      const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
+      isAdmin = record?.role === 'admin'
+    } catch { /* fallback */ }
+  }
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   if (!['approved', 'rejected'].includes(status)) {
     return NextResponse.json({ error: 'Status must be approved or rejected' }, { status: 400 })
@@ -25,9 +29,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const db = await getDB()
 
-  // Get application
   const app = await db.prepare(
-    `SELECT sa.*, u.email, u.full_name
+    `SELECT sa.*, u.email, u.full_name, u.role
      FROM subdomain_applications sa
      JOIN users u ON u.id = sa.user_id
      WHERE sa.id = ?`
@@ -38,7 +41,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   if (status === 'rejected') {
-    // Just reject — update status, send email
     await db.prepare(
       `UPDATE subdomain_applications SET status = 'rejected', reject_reason = ?, reviewed_at = datetime('now') WHERE id = ?`
     ).bind(reject_reason, id).run()
@@ -54,23 +56,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ success: true, action: 'rejected' })
   }
 
-  // Approve — create DNS record + subdomain record
+  // Approve — create DNS record + subdomain
   const recordName = `${app.subdomain_name as string}.tepi.my.id`
   let targetType: 'CNAME' | 'A' = 'CNAME'
   let targetValue = ''
 
-  // Parse target URL to extract domain
   try {
     const url = new URL(app.target_url as string)
     targetValue = url.hostname
-    // Use A record if it's an IP
     const ipMatch = targetValue.match(/^(\d{1,3}\.){3}\d{1,3}$/)
     if (ipMatch) targetType = 'A'
   } catch {
     targetValue = app.target_url as string
   }
 
-  // Create DNS record
   const dnsResult = await createDNSRecord({
     type: targetType,
     name: recordName,
@@ -82,13 +81,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: `DNS creation failed: ${dnsResult.error}` }, { status: 500 })
   }
 
-  // Update application status
+  // Update application status → approved
   await db.prepare(
     `UPDATE subdomain_applications SET status = 'approved', reviewed_at = datetime('now') WHERE id = ?`
   ).bind(id).run()
 
-  // Create subdomain record
-  const expiresAt = new Date(Date.now() + 365 * 86400000).toISOString().replace('T', ' ').replace(/\..*/, '')
+  // Create subdomain — langsung active (admin approved = trusted)
+  const expiresAt = new Date(Date.now() + 90 * 86400000).toISOString().replace('T', ' ').replace(/\..*/, '') // free 3 bulan
+  const isAdminClaim = (app.role as string) === 'admin'
+
   await db.prepare(
     `INSERT INTO subdomains (user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at)
      VALUES (?, ?, ?, ?, ?, 'active', 'free', ?)`
@@ -98,16 +99,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     targetType,
     targetValue,
     dnsResult.result?.id ?? null,
-    expiresAt
+    isAdminClaim ? null : expiresAt // Admin = never expires
   ).run()
 
-  // Send approval email
-  try {
-    await sendEmail(emailApplicationApproved(
-      (app.full_name as string) || (app.email as string),
-      app.subdomain_name as string
-    ))
-  } catch { /* email optional */ }
+  // Log activity
+  await db.prepare(
+    `INSERT INTO activity_logs (user_id, action, detail) VALUES (?, 'approve', ?)`
+  ).bind(user.id, JSON.stringify({ application_id: id, subdomain: app.subdomain_name })).run()
+
+  // Send approval email (skip untuk admin claim)
+  if (!isAdminClaim) {
+    try {
+      await sendEmail(emailApplicationApproved(
+        (app.full_name as string) || (app.email as string),
+        app.subdomain_name as string
+      ))
+    } catch { /* email optional */ }
+  }
 
   return NextResponse.json({ success: true, action: 'approved' })
 }

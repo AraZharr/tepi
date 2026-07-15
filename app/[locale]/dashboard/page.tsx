@@ -107,6 +107,7 @@ export default function DashboardPage() {
       <nav className="flex items-center justify-between border-b border-border bg-surface px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">tepi.my.id</h1>
         <div className="flex items-center gap-3">
+          <a href="/pricing" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Harga</a>
           <span className="text-sm text-text-secondary dark:text-text-secondary-dark">{user?.email}</span>
           <Button variant="secondary" onClick={handleLogout} className="px-3 py-1 text-sm">Keluar</Button>
         </div>

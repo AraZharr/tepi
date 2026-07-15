@@ -21,6 +21,7 @@ function HomePageContent({ locale }: { locale: string }) {
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/blog" className="text-sm font-medium text-text-secondary hover:text-text-primary transition">Blog</Link>
+          <Link href="/pricing" className="text-sm font-medium text-text-secondary hover:text-text-primary transition">Harga</Link>
           <Link href="/contact" className="text-sm font-medium text-text-secondary hover:text-text-primary transition">Kontak</Link>
           <Link href="/login" className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-2 dark:border-border-dark dark:text-text-primary-dark dark:hover:bg-surface-2-dark">Masuk</Link>
           <Link href="/register" className="rounded-md bg-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-hover dark:bg-blue-dark dark:hover:bg-blue-hover-dark">Daftar</Link>
