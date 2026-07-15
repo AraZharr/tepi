@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { ThemeInitializer } from '@/components/ThemeInitializer'
 import '../globals.css'
+import ChatWidget from '@/components/ChatWidget'
 
 // Font sesuai design.md §3 — HANYA dua font ini yang boleh dipakai di seluruh app
 const poppins = Poppins({
@@ -63,6 +64,7 @@ export default async function LocaleLayout({
       <body className="font-body">
         <NextIntlClientProvider messages={messages}>
           {children}
+          <ChatWidget />
         </NextIntlClientProvider>
       </body>
     </html>
