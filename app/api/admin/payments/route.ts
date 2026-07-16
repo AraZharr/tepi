@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 
 const guard = async () => {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) throw new Error('Forbidden')
   let isAdmin = user.id === process.env.ADMIN_USER_ID
   if (!isAdmin) {

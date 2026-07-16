@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { ensureUserRecord } from '@/lib/users'
+import { getSessionUser } from '@/lib/auth'
 
 export default async function DashboardLayout({
   children,
@@ -10,14 +9,22 @@ export default async function DashboardLayout({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
 
   if (!user) {
     redirect(locale === 'id' ? '/login' : `/${locale}/login`)
   }
 
-  await ensureUserRecord(user)
+  // Ensure user record exists in D1
+  const { getDB } = await import('@/lib/db')
+  const db = await getDB()
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO users (id, email, username, full_name, role, subdomain_limit, email_verified)
+       VALUES (?, ?, ?, ?, 'user', 2, 1)`
+    )
+    .bind(user.id, user.email, user.username, user.full_name)
+    .run()
 
   return <>{children}</>
 }

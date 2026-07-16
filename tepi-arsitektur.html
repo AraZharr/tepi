@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tepi.my.id — Arsitektur & Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; padding: 40px 20px; }
+  .page { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 32px; }
+  .section { background: #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
+  .section h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section h2 .badge { font-size: 12px; background: #334155; padding: 2px 10px; border-radius: 99px; color: #94a3b8; font-weight: 500; }
+  .tree { font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.7; color: #cbd5e1; white-space: pre; overflow-x: auto; }
+  .tree .dir { color: #60a5fa; }
+  .tree .file { color: #f1f5f9; }
+  .tree .highlight { background: #334155; border-radius: 3px; padding: 0 4px; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.blue { background: #3b82f6; }
+  .dot.green { background: #22c55e; }
+  .dot.red { background: #ef4444; }
+  .dot.purple { background: #a855f7; }
+  .dot.yellow { background: #eab308; }
+  .dot.gray { background: #64748b; }
+  .mermaid-wrap { background: #0f172a; border-radius: 12px; padding: 16px; overflow: auto; margin-top: 12px; }
+  .footer { text-align: center; color: #64748b; font-size: 12px; padding: 24px 0; border-top: 1px solid #1e293b; margin-top: 32px; }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .page { max-width: 100%; }
+    .section { background: #fff; border: 1px solid #ddd; page-break-inside: avoid; }
+    h1 { -webkit-text-fill-color: #1e40af; }
+    .tree { color: #333; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>🏗️ Tepi.my.id — Arsitektur & Flow</h1>
+<p class="subtitle">Complete system map · Juli 2026 · 35+ files · 8 D1 tables · 4 external services</p>
+
+<!-- FILE TREE -->
+<div class="section">
+<h2>📁 File Tree</h2>
+<div class="tree">
+<span class="dir">.github/workflows/</span>
+  ├── <span class="file">deploy.yml</span>              <span style="color:#64748b"># CI/CD: build + deploy + auto D1 migration</span>
+  ├── <span class="file">expiry-cron.yml</span>          <span style="color:#64748b"># Harian: hapus expired subdomain H+14</span>
+  └── <span class="file">keep-supabase-alive.yml</span>
+
+<span class="dir">app/[locale]/</span>  <span style="color:#64748b">← 13 halaman publik + admin (i18n id/en)</span>
+  ├── <span class="file">page.tsx</span>                    <span style="color:#64748b"># Landing page</span>
+  ├── <span class="file">login/page.tsx</span>               <span style="color:#64748b"># Login + Turnstile + Google OAuth</span>
+  ├── <span class="file">register/page.tsx</span>            <span style="color:#64748b"># Register + Turnstile</span>
+  ├── <span class="file">pricing/page.tsx</span>             <span style="color:#64748b"># Free vs Paid comparison</span>
+  ├── <span class="file">blog/page.tsx</span>                <span style="color:#64748b"># Blog listing + testimoni</span>
+  ├── <span class="file">contact/page.tsx</span>              <span style="color:#64748b"># Contact form</span>
+  ├── <span class="file">report/page.tsx</span>               <span style="color:#64748b"># Abuse report</span>
+  ├── <span class="file">dashboard/page.tsx</span>            <span style="color:#64748b"># User dashboard + countdown</span>
+  │   └── <span class="file">invoices/</span>                   <span style="color:#64748b"># Invoice list + detail</span>
+  └── <span class="file">admin/</span>
+      ├── <span class="file">page.tsx</span>                    <span style="color:#64748b"># Review applications</span>
+      ├── <span class="file">blog/page.tsx</span>                <span style="color:#64748b"># Blog CRUD</span>
+      ├── <span class="file">users/page.tsx</span>               <span style="color:#64748b"># User management</span>
+      ├── <span class="file">abuse/page.tsx</span>               <span style="color:#64748b"># Abuse reports panel</span>
+      ├── <span class="file">activity/page.tsx</span>            <span style="color:#64748b"># Activity logs</span>
+      ├── <span class="file">payments/page.tsx</span>            <span style="color:#64748b"># Payment history + invoice</span>
+      └── <span class="file">settings/page.tsx</span>            <span style="color:#64748b"># Site settings</span>
+
+<span class="dir">app/api/</span>  <span style="color:#64748b">← 22 endpoint</span>
+  ├── <span class="file">user/subdomains/route.ts</span>     <span style="color:#64748b"># Claim + list subdomain</span>
+  ├── <span class="file">user/renew/route.ts</span>           <span style="color:#64748b"># Renew free subdomain</span>
+  ├── <span class="file">user/invoices/route.ts</span>        <span style="color:#64748b"># User invoice list</span>
+  ├── <span class="file">payment/create/route.ts</span>       <span style="color:#64748b"># Create QRIS order</span>
+  ├── <span class="file">webhook/paywuz/route.ts</span>       <span style="color:#64748b"># Paywuz callback</span>
+  ├── <span class="file">cron/expiry/route.ts</span>          <span style="color:#64748b"># Expiry engine</span>
+  ├── <span class="file">contact/route.ts</span>              <span style="color:#64748b"># Contact message</span>
+  ├── <span class="file">abuse/route.ts</span>                <span style="color:#64748b"># Abuse report</span>
+  ├── <span class="file">admin/*</span>                      <span style="color:#64748b"># 8 admin endpoint</span>
+  └── <span class="file">blog/*</span>                       <span style="color:#64748b"># Blog CRUD</span>
+
+<span class="dir">lib/</span>  <span style="color:#64748b">← 14 utility files</span>
+  ├── <span class="file">reserved.ts</span>                   <span style="color:#64748b"># 70+ subdomain blocklist</span>
+  ├── <span class="file">validators.ts</span>                 <span style="color:#64748b"># Subdomain + URL validation</span>
+  ├── <span class="file">auto-scan.ts</span>                  <span style="color:#64748b"># DNS + HTTP + keyword scan</span>
+  ├── <span class="file">turnstile.ts</span>                  <span style="color:#64748b"># CAPTCHA server verify</span>
+  ├── <span class="file">cloudflare-dns.ts</span>             <span style="color:#64748b"># CF DNS API wrapper</span>
+  ├── <span class="file">invoice.ts</span>                    <span style="color:#64748b"># INV- format generator</span>
+  ├── <span class="file">admin-notif.ts</span>                <span style="color:#64748b"># Push notif email template</span>
+  ├── <span class="file">resend.ts</span>                     <span style="color:#64748b"># Email transactional</span>
+  ├── <span class="file">paywuz.ts</span>                     <span style="color:#64748b"># Paywuz client</span>
+  └── <span class="file">db.ts</span>                         <span style="color:#64748b"># D1 client helper</span>
+
+<span class="dir">migrations/</span>
+  └── <span class="file">0009_complete.sql</span>             <span style="color:#64748b"># 8 tables + 2 alters</span></div>
+</div>
+
+<!-- ARCHITECTURE DIAGRAM -->
+<div class="section">
+<h2>🔧 Arsitektur</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph TD
+    subgraph FRONTEND["Next.js 15 — CF Workers"]
+        P1["[locale]/pages (13 halaman)"]
+        P2["components/"]
+        P3["middleware.ts"]
+    end
+    subgraph API["API Routes (22)"]
+        A1["user/*"]
+        A2["admin/*"]
+        A3["blog/*"]
+        A4["payment/*"]
+        A5["webhook/*"]
+        A6["cron/*"]
+    end
+    subgraph LIB["Library"]
+        L1["validators.ts"]
+        L2["auto-scan.ts"]
+        L3["turnstile.ts"]
+        L4["cf-dns.ts"]
+        L5["admin-notif.ts"]
+        L6["invoice.ts"]
+    end
+    subgraph D1["D1 Database — Cloudflare"]
+        D1a["users"]
+        D1b["subdomains"]
+        D1c["payments"]
+        D1d["posts"]
+        D1e["abuse_reports"]
+        D1f["activity_logs"]
+        D1g["site_settings"]
+        D1h["contact_messages"]
+    end
+    subgraph EXT["External Services"]
+        E1["Supabase Auth"]
+        E2["Cloudflare DNS API"]
+        E3["Paywuz — QRIS"]
+        E4["Resend — Email"]
+        E5["Google DNS"]
+        E6["Turnstile"]
+    end
+    FRONTEND --> API
+    API --> LIB
+    API --> D1
+    API --> EXT
+    P1 --> E6
+    P1 --> E1
+    A4 --> E3
+    A5 --> E3
+    A5 --> E4
+    A6 --> E2
+    A6 --> E5
+</div>
+</div>
+</div>
+
+<!-- D1 DATABASE SCHEMA -->
+<div class="section">
+<h2>🗄️ D1 Database — 8 Tables</h2>
+<div class="tree">
+<span class="dir">users</span>           <span style="color:#64748b"># id, email, full_name, role (user|admin), subdomain_limit</span>
+<span class="dir">subdomains</span>       <span style="color:#64748b"># id, user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at</span>
+<span class="dir">subdomain_applications</span>  <span style="color:#64748b"># id, user_id, subdomain_name, target_url, status, reject_reason</span>
+<span class="dir">payments</span>         <span style="color:#64748b"># id, user_id, subdomain_id, order_id, invoice_number, amount, status, paid_at</span>
+<span class="dir">posts</span>            <span style="color:#64748b"># id, slug, title, content, excerpt, cover_image, is_published, published_at</span>
+<span class="dir">contact_messages</span>  <span style="color:#64748b"># id, name, email, subject, message, is_read</span>
+<span class="dir">abuse_reports</span>     <span style="color:#64748b"># id, subdomain_name, reporter_email, reason, status</span>
+<span class="dir">activity_logs</span>     <span style="color:#64748b"># id, user_id, action, detail, ip_address, created_at</span>
+<span class="dir">site_settings</span>     <span style="color:#64748b"># key, value — 14 settings (site_name, sosmed, WA, OG dll)</span>
+</div>
+</div>
+
+<!-- MAIN FLOW -->
+<div class="section">
+<h2>🔄 Main Flow — User + Admin</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+flowchart TD
+    subgraph USER["👤 User / Customer"]
+        U1[Buka tepi.my.id]
+        U2[Register + Turnstile]
+        U3[Login / Google OAuth]
+        U4[Dashboard]
+        U5[Claim subdomain]
+        U6[Pakai subdomain ✨]
+        U7[Renew free / Upgrade paid]
+    end
+    subgraph SYSTEM["⚙️ System — Auto"]
+        S1[Validasi + Reserved check]
+        S2[Auto-scan DNS + HTTP]
+        S3[Status: QUARANTINE]
+        S4[Notif email ke Admin]
+        S5[Create DNS Cloudflare]
+        S6[Subdomain ACTIVE]
+        S7[H-7: Email peringatan]
+        S8[H+14: Hapus DNS + Release]
+    end
+    subgraph ADMIN["👑 Admin — AraZhar"]
+        A1[Terima email notif]
+        A2[Buka /admin]
+        A3[Review aplikasi]
+        A4[Approve / Tolak]
+        A5[Review abuse report]
+        A6[Blog CRUD]
+        A7[Manage payments]
+        A8[Site settings]
+    end
+    U1 --> U2 --> U3 --> U4
+    U5 --> S1 --> S2 --> S3 --> S4
+    S4 --> A1 --> A2 --> A3 --> A4
+    A4 -->|Approve| S5 --> S6
+    A4 -->|Tolak| R1[Email reject + alasan]
+    S6 --> U6
+    U6 --> U7
+    U7 -->|Free| R2[Extend 3 bulan]
+    U7 -->|Paid| R3[Invoice INV → QRIS → Extend 1 thn]
+    S6 --> S7 --> S8
+</div>
+</div>
+</div>
+
+<!-- FULL FLOW DIAGRAM -->
+<div class="section">
+<h2>🧭 Complete Journey — 0 to Production</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+flowchart LR
+    subgraph LAND["1. LANDING"]
+        L1[Buka web]
+        L2[Lihat harga]
+        L3[Baca blog]
+    end
+    subgraph REG["2. REGISTER"]
+        R1[Turnstile ✅]
+        R2[Email + password]
+        R3[Verifikasi email]
+    end
+    subgraph DASH["3. DASHBOARD"]
+        D1[Lihat subdomain]
+        D2[Ajukan baru]
+        D3[Riwayat invoice]
+    end
+    subgraph CLAIM2["4. CLAIM SUBDOMAIN"]
+        C1[Validasi nama]
+        C2[Auto-scan]
+        C3[Quarantine]
+    end
+    subgraph ADMIN2["5. ADMIN REVIEW"]
+        A1[Notif email]
+        A2[Buka /admin]
+        A3[Approve → DNS]
+    end
+    subgraph LIVE["6. SUBDOMAIN HIDUP"]
+        L1a[3 bulan aktif]
+        L2a[Countdown]
+    end
+    subgraph RENEW["7. RENEWAL"]
+        RE1[Free: extend 3 bln]
+        RE2[Paid: INV → QRIS]
+    end
+    subgraph EXPR["8. EXPIRED"]
+        E1[H-7 reminder]
+        E2[Grace 14 hari]
+        E3[Release]
+    end
+    LAND --> REG --> DASH --> CLAIM2 --> ADMIN2 --> LIVE --> RENEW
+    RENEW -->|Tidak| EXPR
+</div>
+</div>
+</div>
+
+<!-- LO FLOW -->
+<div class="section">
+<h2>👑 Lo — AraZhar (Admin)</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+flowchart TD
+    START([Mulai]) --> CF[Set env di CF Workers]
+    CF --> GH[Set secrets di GitHub Actions]
+    GH --> PUSH[Push ke main]
+    PUSH --> CI[CI/CD jalan: migrate + deploy]
+    CI --> SETUP[Buka /api/admin/setup]
+    SETUP --> ADMIN[Role: ADMIN ✅]
+    ADMIN --> PANEL[Buka /admin]
+    PANEL --> ACT1{Notif email masuk}
+    ACT1 -->|📋 Aplikasi baru| RV[Review aplikasi]
+    ACT1 -->|🚨 Abuse report| AB[Review abuse]
+    ACT1 -->|💰 Payment| PAY[Lihat invoice]
+    ACT1 -->|✉️ Pesan| MSG[Balas pesan]
+    RV --> APPR{Approve?}
+    APPR -->|Ya| DNS[DNS auto create]
+    DNS --> ACTIVE[Subdomain LIVE]
+    APPR -->|Tidak| REJ[Email reject]
+    AB --> SUSP{Suspend?}
+    SUSP -->|Ya| DEL[Hapus DNS + DB]
+    SUSP -->|Tidak| CLOSE[Tandai selesai]
+    PANEL --> BLOG[Tulis blog / testimoni]
+    PANEL --> SET[Edit site settings]
+    PANEL --> USER[Manage users]
+</div>
+</div>
+</div>
+
+<!-- CUSTOMER FLOW -->
+<div class="section">
+<h2>👤 Customer Flow</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+flowchart TD
+    START([Buka tepi.my.id]) --> DEC{Ada akun?}
+    DEC -->|Belum| REG[Register]
+    REG --> CAP[✅ Turnstile]
+    CAP --> FORM[Isi: nama, email, password]
+    FORM --> VERIF[Verifikasi email]
+    VERIF --> LOGIN[Login]
+    DEC -->|Sudah| LOGIN2[Login]
+    LOGIN2 --> CAP2[✅ Turnstile]
+    CAP2 --> DASH[Dashboard]
+    DASH --> CLAIM[Ajukan subdomain]
+    CLAIM --> VALID{Validasi}
+    VALID -->|Nama reserved| FAIL[Tolak]
+    VALID -->|✅ OK| SCAN[Auto-scan]
+    SCAN --> WAIT[Menunggu review admin]
+    WAIT -->|Disetujui| LIVE[✅ Subdomain aktif!]
+    WAIT -->|Ditolak| REJECT[Email alasan]
+    LIVE --> USE[Pakai subdomain]
+    USE --> COUNTDOWN[Countdown 3 bulan]
+    COUNTDOWN --> RENEW{Perpanjang?}
+    RENEW -->|Free| FREE_RENEW[Cek target → Extend 3 bln]
+    RENEW -->|Paid Rp5k| PAY[QRIS → Extend 1 thn]
+    RENEW -->|Tidak| EXP[H-7 email → Grace 14 hr → Release]
+    FREE_RENEW --> USE
+    PAY --> USE
+    DASH --> INV[Lihat invoice]
+    DASH --> CONTACT[Hubungi kami]
+    DASH --> REPORT[Laporkan abuse]
+</div>
+</div>
+</div>
+
+<!-- NOTIF EMAIL FLOW -->
+<div class="section">
+<h2>📬 Admin Push Notif Email</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+flowchart LR
+    subgraph EVENTS["Trigger Events"]
+        E1[User claim subdomain]
+        E2[User report abuse]
+        E3[User kirim kontak]
+        E4[Payment sukses]
+    end
+    subgraph EMAIL["Email ke Admin"]
+        M1["📋 Aplikasi Baru
+        subdomain + nama + email + desc"]
+        M2["🚨 Abuse Report
+        subdomain + pelapor + alasan"]
+        M3["✉️ Pesan Baru
+        nama + email + subjek + isi"]
+        M4["💰 Pembayaran
+        subdomain + invoice + jumlah"]
+    end
+    E1 --> M1
+    E2 --> M2
+    E3 --> M3
+    E4 --> M4
+</div>
+</div>
+</div>
+
+<!-- TIMELINE -->
+<div class="section">
+<h2>⏱️ Expiry Timeline</h2>
+<div class="mermaid-wrap">
+<div class="mermaid">
+gantt
+    title Siklus Hidup Subdomain
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d %b
+    section Subdomain Aktif
+    Masa Aktif 3 bulan       :active, 2026-07-01, 90d
+    section Grace Period
+    H-7: Email peringatan    :crit, 2026-09-24, 1d
+    H-0: Expired             :milestone, 2026-10-01, 1d
+    Grace 14 hari            :grace, after 2026-10-01, 14d
+    H+14: Release ke publik  :milestone, 2026-10-15, 1d
+    section Opsi
+    Renew free               :renew, 2026-09-25, 1d
+    Upgrade paid 1 tahun     :paid, 2026-08-01, 365d
+</div>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="dot blue"></div> Masa aktif</div>
+  <div class="legend-item"><div class="dot red"></div> Critical</div>
+  <div class="legend-item"><div class="dot yellow"></div> Grace period</div>
+  <div class="legend-item"><div class="dot green"></div> Renewal</div>
+</div>
+</div>
+
+<!-- RESERVED LIST -->
+<div class="section">
+<h2>🚫 Reserved Subdomain List <span class="badge">70+ names</span></h2>
+<div class="tree">
+<span style="color:#60a5fa">Admin & System:</span>   admin, adm, root, system, sys, server, panel, dashboard, cpanel, whm, plesk
+<span style="color:#60a5fa">Email:</span>            mail, email, noreply, no-reply, no_reply, reply, contact, support, help, cs, care, service, info
+<span style="color:#60a5fa">DNS:</span>              ns1, ns2, ns3, ns4, dns, mx, smtp, pop3, imap
+<span style="color:#60a5fa">Security:</span>         ssl, tls, auth, login, register, signup, signin, logout, signout, verify, captcha
+<span style="color:#60a5fa">Web:</span>              www, wwww, web, site, home, index, main, app, dev, test, beta, alpha, staging, demo, stage, prod, api, rest, graphql, cdn, static, assets, media, upload, files, download, status, health, monitor, ping
+<span style="color:#60a5fa">Social:</span>           blog, news, forum, community, chat, group, event
+<span style="color:#60a5fa">Monitoring:</span>       tracker, analytics, stats, log, logs, debug
+<span style="color:#60a5fa">Payment:</span>          payment, billing, invoice, receipt, order, cart
+<span style="color:#60a5fa">Legal:</span>            legal, terms, privacy, policy, copyright, dmca
+<span style="color:#60a5fa">Company:</span>          about, company, team, career, job, office
+<span style="color:#60a5fa">Danger:</span>           null, undefined, localhost, 0, 127001, *, wildcard, any, all</div>
+</div>
+
+<!-- PENDING -->
+<div class="section">
+<h2>📋 Pending — Biar Live</h2>
+<div class="tree">
+<span style="color:#ef4444">[[ WAJIB — Set Sekarang ]]</span>
+<span style="color:#fff">1.</span> CF Workers env: <span style="color:#60a5fa">NEXT_PUBLIC_SUPABASE_URL</span>, <span style="color:#60a5fa">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>, <span style="color:#60a5fa">ADMIN_USER_ID</span>
+<span style="color:#fff">2.</span> GH Secrets: <span style="color:#60a5fa">CF_API_TOKEN</span>, <span style="color:#60a5fa">CF_ACCOUNT_ID</span>, <span style="color:#60a5fa">SUPABASE_URL</span>, <span style="color:#60a5fa">SUPABASE_ANON_KEY</span>, <span style="color:#60a5fa">ADMIN_USER_ID</span>
+
+<span style="color:#eab308">[[ Opsional — Nyusul ]]</span>
+<span style="color:#fff">3.</span> Turnstile keys (CF dashboard)
+<span style="color:#fff">4.</span> Resend API key (notif email)
+<span style="color:#fff">5.</span> Paywuz keys (QRIS payment)
+<span style="color:#fff">6.</span> CRON_SECRET (expiry cron auth)
+</div>
+</div>
+
+<div class="footer">
+Tepi.my.id — Free subdomain for developers Indonesia<br>
+Built with Next.js 15 + Supabase Auth + Cloudflare Workers D1 + Turnstile + GitHub Actions CI/CD<br>
+Dokumentasi sistem · 8 flow diagram · 8 D1 tables · 22 API endpoint · 13 public pages
+</div>
+
+</div>
+<script>mermaid.initialize({theme:'dark',themeVariables:{primaryColor:'#1e293b',primaryTextColor:'#e2e8f0',primaryBorderColor:'#334155',lineColor:'#475569',secondaryColor:'#0f172a',tertiaryColor:'#2563eb'}});</script>
+</body>
+</html>

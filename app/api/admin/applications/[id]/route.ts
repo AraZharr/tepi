@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/resend'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let isAdmin = user.id === process.env.ADMIN_USER_ID

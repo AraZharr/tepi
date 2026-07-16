@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
+import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
-import { createClient } from '@/lib/supabase/server'
-
 export async function GET() {
   const db = await getDB()
   const posts = await db.prepare(
@@ -14,8 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user || user.id !== process.env.ADMIN_USER_ID) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }

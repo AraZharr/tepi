@@ -1,15 +1,10 @@
 /**
  * Email transaksional via Resend.
- * Dokumentasi: https://resend.com/docs/api-reference/emails/send-email
- *
- * Free tier: 3.000 email/bulan — cukup untuk fase awal.
- * Setelah domain tepi.my.id aktif dan dikonfigurasi di Resend,
- * ganti `from` ke noreply@tepi.my.id
+ * Free tier: 3.000 email/bulan.
+ * Domain tepi.my.id dikonfigurasi belakangan setelah live.
  */
 
 const RESEND_API = 'https://api.resend.com/emails'
-
-// Sementara pakai domain onboarding Resend sampai tepi.my.id siap
 const FROM = 'tepi.my.id <onboarding@resend.dev>'
 
 interface SendEmailOptions {
@@ -19,24 +14,29 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    console.warn('[resend] RESEND_API_KEY missing — OTP logged for dev')
+    console.warn(`[resend] to=${to} subject=${subject}`)
+    return { id: 'dev-skip' }
+  }
+
   const res = await fetch(RESEND_API, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ from: FROM, to, subject, html }),
   })
 
   if (!res.ok) {
-    const err = await res.json()
+    const err = await res.json().catch(() => ({}))
     throw new Error(`Resend error: ${JSON.stringify(err)}`)
   }
 
   return res.json()
 }
-
-// ─── Template Email ─────────────────────────────────────────────────────────
 
 export function emailApplicationReceived(name: string, subdomain: string) {
   return {

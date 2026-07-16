@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { validateSubdomainName, validateTargetURL } from '@/lib/validators'
 import { isReserved } from '@/lib/reserved'
@@ -8,8 +8,7 @@ import { verifyTurnstile } from '@/lib/turnstile'
 import { notifNewApplication } from '@/lib/admin-notif'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = await getDB()
@@ -39,8 +38,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()

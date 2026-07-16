@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 
 export default async function AdminLayout({
@@ -7,19 +7,24 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) { redirect('/login') }
 
-  // Check role from D1
-  let isAdmin = user.id === process.env.ADMIN_USER_ID // fallback ke env
+  let isAdmin = false
   try {
     const db = await getDB()
     const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
     if (record?.role === 'admin') isAdmin = true
-  } catch { /* use fallback */ }
+  } catch { /* use env fallback */ }
 
-  if (!isAdmin) { redirect('/dashboard') }
+  if (!isAdmin && user.id !== process.env.ADMIN_USER_ID) { redirect('/dashboard') }
+
+  const AdminLink = ({ href, label }: { href: string; label: string }) => (
+    <a href={href}
+      className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+      {label}
+    </a>
+  )
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark">
@@ -40,14 +45,5 @@ export default async function AdminLayout({
         <main className="flex-1">{children}</main>
       </div>
     </div>
-  )
-}
-
-function AdminLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a href={href}
-      className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
-      {label}
-    </a>
   )
 }

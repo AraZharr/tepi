@@ -1,17 +1,12 @@
 import { getDB } from '@/lib/db'
-import type { User } from '@supabase/supabase-js'
 
-export async function ensureUserRecord(user: User) {
+export async function ensureUserRecord(userId: string, email: string, username: string | null, fullName: string | null) {
   const db = await getDB()
   await db
     .prepare(
-      `INSERT OR IGNORE INTO users (id, email, full_name, created_at)
-       VALUES (?, ?, ?, datetime('now'))`
+      `INSERT OR IGNORE INTO users (id, email, username, full_name, role, subdomain_limit, email_verified)
+       VALUES (?, ?, ?, ?, 'user', 2, 1)`
     )
-    .bind(
-      user.id,
-      user.email ?? '',
-      user.user_metadata?.full_name ?? user.user_metadata?.name ?? null
-    )
+    .bind(userId, email, username, fullName)
     .run()
 }

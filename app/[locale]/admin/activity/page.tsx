@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 
 export default function AdminActivityPage() {
@@ -11,8 +10,7 @@ export default function AdminActivityPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    fetch('/api/auth').then(r => r.json()).then(({ user }) => {
       if (!user) { router.push('/login'); return }
       fetchLogs()
     })

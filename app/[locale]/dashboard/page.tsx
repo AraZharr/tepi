@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -53,10 +52,9 @@ export default function DashboardPage() {
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/login'); return }
-      setUser(user)
+    fetch('/api/auth').then(r => r.json()).then(d => {
+      if (!d.user) { router.push('/login'); return }
+      setUser(d.user)
       fetchData()
     })
   }, [])
@@ -93,8 +91,7 @@ export default function DashboardPage() {
   }
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await fetch('/api/auth', { method: 'DELETE' })
     router.push('/login')
     router.refresh()
   }
