@@ -1,33 +1,62 @@
 /**
- * Email transaksional via Resend.
- * Free tier: 3.000 email/bulan.
- * Domain tepi.my.id dikonfigurasi belakangan setelah live.
+ * Email service — Cloudflare Send Email (paid) + fallback Resend (free)
+ *
+ * Cloudflare Workers Send Email requires:
+ * - Workers Paid plan ($5/month)
+ * - Email binding configured in wrangler.toml:
+ *   [send_email]
+ *   binding = "EMAIL"
+ *   destination_address = "noreply@tepi.my.id"
+ *   allowed_destination_addresses = ["noreply@tepi.my.id"]
+ *
+ * Fallback to Resend for free tier.
  */
-
-const RESEND_API = 'https://api.resend.com/emails'
-const FROM = 'tepi.my.id <onboarding@resend.dev>'
 
 interface SendEmailOptions {
   to: string
   subject: string
   html: string
+  from?: string
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions) {
-  const key = process.env.RESEND_API_KEY
-  if (!key) {
-    console.warn('[resend] RESEND_API_KEY missing — OTP logged for dev')
-    console.warn(`[resend] to=${to} subject=${subject}`)
-    return { id: 'dev-skip' }
+export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
+  // Try Cloudflare Email binding first
+  const cfEnv = process.env as any
+  if (cfEnv.EMAIL) {
+    try {
+      const message = await cfEnv.EMAIL.send({
+        to,
+        from: from || 'noreply@tepi.my.id',
+        subject,
+        html,
+      })
+      console.log('[email] sent via CF', message)
+      return { id: message.id, provider: 'cf' }
+    } catch (e) {
+      console.warn('[email] CF send failed', e)
+    }
   }
 
-  const res = await fetch(RESEND_API, {
+  // Fallback to Resend
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    console.warn('[email] RESEND_API_KEY missing — OTP logged for dev')
+    console.warn(`[email] to=${to} subject=${subject}`)
+    return { id: 'dev-skip', provider: 'none' }
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({
+      from: from || 'tepi.my.id <onboarding@resend.dev>',
+      to,
+      subject,
+      html,
+    }),
   })
 
   if (!res.ok) {
@@ -35,7 +64,8 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
     throw new Error(`Resend error: ${JSON.stringify(err)}`)
   }
 
-  return res.json()
+  const data = await res.json()
+  return { id: data.id, provider: 'resend' }
 }
 
 export function emailApplicationReceived(name: string, subdomain: string) {

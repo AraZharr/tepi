@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
-import { sendEmail, emailPaymentSuccess } from '@/lib/resend'
+import { sendEmail, emailPaymentSuccess } from '@/lib/email'
 import { notifPaymentSuccess } from '@/lib/admin-notif'
 
 /**

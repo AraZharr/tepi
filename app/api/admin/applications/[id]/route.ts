@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { createDNSRecord } from '@/lib/cloudflare-dns'
-import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/resend'
+import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/email'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSessionUser()

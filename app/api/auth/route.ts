@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getDB } from '@/lib/db'
-import { sendEmail } from '@/lib/resend'
+import { sendEmail } from '@/lib/email'
 import { hashPassword, verifyPassword, createSessionToken, verifySessionToken, setSessionCookie, clearSessionCookie, getSessionUser, requireUser, issueOtp, consumeOtp, findUserByIdentifier } from '@/lib/auth'
 
 export async function POST(request: Request) {

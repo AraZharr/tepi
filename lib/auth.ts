@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
-import { sendEmail } from '@/lib/resend'
+import { sendEmail } from '@/lib/email'
 
 const SESSION_COOKIE = 'tepi_session'
 const OTP_TTL_MS = 10 * 60 * 1000
