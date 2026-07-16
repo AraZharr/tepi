@@ -1,16 +1,12 @@
 /**
- * Email service — Cloudflare Send Email (paid) + fallback Resend (free)
- *
- * Cloudflare Workers Send Email requires:
- * - Workers Paid plan ($5/month)
- * - Email binding configured in wrangler.toml:
- *   [send_email]
- *   binding = "EMAIL"
- *   destination_address = "noreply@tepi.my.id"
- *   allowed_destination_addresses = ["noreply@tepi.my.id"]
- *
- * Fallback to Resend for free tier.
+ * Email transaksional via Resend.
+ * Free tier: 3.000 email/bulan.
+ * Setelah domain tepi.my.id dikonfigurasi di Resend,
+ * ganti FROM ke noreply@tepi.my.id
  */
+
+const RESEND_API = 'https://api.resend.com/emails'
+const FROM = 'tepi.my.id <onboarding@resend.dev>'
 
 interface SendEmailOptions {
   to: string
@@ -20,43 +16,20 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
-  // Try Cloudflare Email binding first
-  const cfEnv = process.env as any
-  if (cfEnv.EMAIL) {
-    try {
-      const message = await cfEnv.EMAIL.send({
-        to,
-        from: from || 'noreply@tepi.my.id',
-        subject,
-        html,
-      })
-      console.log('[email] sent via CF', message)
-      return { id: message.id, provider: 'cf' }
-    } catch (e) {
-      console.warn('[email] CF send failed', e)
-    }
-  }
-
-  // Fallback to Resend
   const key = process.env.RESEND_API_KEY
   if (!key) {
     console.warn('[email] RESEND_API_KEY missing — OTP logged for dev')
     console.warn(`[email] to=${to} subject=${subject}`)
-    return { id: 'dev-skip', provider: 'none' }
+    return { id: 'dev-skip' }
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetch(RESEND_API, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from: from || 'tepi.my.id <onboarding@resend.dev>',
-      to,
-      subject,
-      html,
-    }),
+    body: JSON.stringify({ from: from || FROM, to, subject, html }),
   })
 
   if (!res.ok) {
@@ -64,8 +37,7 @@ export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
     throw new Error(`Resend error: ${JSON.stringify(err)}`)
   }
 
-  const data = await res.json()
-  return { id: data.id, provider: 'resend' }
+  return res.json()
 }
 
 export function emailApplicationReceived(name: string, subdomain: string) {
