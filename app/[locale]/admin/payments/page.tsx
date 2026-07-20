@@ -11,7 +11,8 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then(({ user }) => {
+    fetch('/api/auth').then(r => r.json()).then((data: any) => {
+      const user = data?.user
       if (!user) { router.push('/login'); return }
       fetchData()
     })

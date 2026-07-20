@@ -41,5 +41,5 @@ jobs:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NEXT_PUBLIC_ROOT_DOMAIN: ${{ secrets.NEXT_PUBLIC_ROOT_DOMAIN }}
           ADMIN_USER_ID: ${{ secrets.ADMIN_USER_ID }}
-          #PAYWUZ_API_KEY: ${{ secrets.PAYWUZ_API_KEY }}
+          PAYWUZ_API_KEY: ${{ secrets.PAYWUZ_API_KEY }}
           #PAYWUZ_MERCHANT_ID: ${{ secrets.PAYWUZ_MERCHANT_ID }}

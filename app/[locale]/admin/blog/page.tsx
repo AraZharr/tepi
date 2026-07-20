@@ -16,7 +16,8 @@ export default function AdminBlogPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then(({ user }) => {
+    fetch('/api/auth').then(r => r.json()).then((data: any) => {
+      const user = data?.user
       if (!user) { router.push('/login'); return }
       fetchPosts()
     })

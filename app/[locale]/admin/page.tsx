@@ -27,7 +27,8 @@ export default function AdminPage() {
   const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then(({ user }) => {
+    fetch('/api/auth').then(r => r.json()).then((data: any) => {
+      const user = data?.user
       if (!user) { router.push('/login'); return }
       setUser(user)
       fetchApplications()
