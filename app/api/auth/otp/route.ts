@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword, createSessionToken, setSessionCookie, iss
 
 /** POST — send OTP */
 export async function POST(request: Request) {
-  const body = await request.json()
+  const body: any = await request.json()
   const { email, turnstile_token } = body
 
   if (!email || typeof email !== 'string') {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
 /** PUT — verify OTP + login (for login & register verify) */
 export async function PUT(request: Request) {
-  const body = await request.json()
+  const body: any = await request.json()
   const { code, identifier, email, password } = body
   const id = identifier || email
 

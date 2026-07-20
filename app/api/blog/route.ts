@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const body: any = await req.json()
   const { slug, title, content, excerpt, cover_image, author_name, tags, is_published } = body
 
   if (!slug || !title || !content) {

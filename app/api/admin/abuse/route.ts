@@ -27,7 +27,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
-  const body = await req.json()
+  const body: any = await req.json()
   const { id, status } = body
 
   if (!['reviewed', 'actioned'].includes(status)) {

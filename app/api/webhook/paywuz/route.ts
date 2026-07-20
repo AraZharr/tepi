@@ -8,7 +8,7 @@ import { notifPaymentSuccess } from '@/lib/admin-notif'
  * Endpoint: POST /api/webhook/paywuz
  */
 export async function POST(req: Request) {
-  const body = await req.json()
+  const body: any = await req.json()
 
   // Ambil signature dari headers
   const signature = req.headers.get('x-paywuz-signature') || ''

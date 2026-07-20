@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  const body: any = await req.json()
   const { subdomain_name, target_platform, target_url, project_type, project_description,
     is_public, has_monetization, github_link, linkedin_link, social_link, turnstile_token } = body
 

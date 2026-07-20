@@ -23,7 +23,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
-  const body = await req.json()
+  const body: any = await req.json()
   const { slug, title, content, excerpt, cover_image, author_name, tags, is_published, is_featured } = body
 
   if (!slug || !title || !content) {

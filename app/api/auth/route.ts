@@ -5,7 +5,7 @@ import { sendEmail } from '@/lib/email'
 import { hashPassword, verifyPassword, createSessionToken, verifySessionToken, setSessionCookie, clearSessionCookie, getSessionUser, requireUser, issueOtp, consumeOtp, findUserByIdentifier } from '@/lib/auth'
 
 export async function POST(request: Request) {
-  const body = await request.json()
+  const body: any = await request.json()
   const { email, password, username, fullName } = body
 
   if (!email || typeof email !== 'string') {
@@ -55,7 +55,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const body = await request.json()
+  const body: any = await request.json()
   const { code, identifier, password } = body
 
   if (!code || typeof code !== 'string') {

@@ -12,7 +12,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
   const { id } = await params
-  const body = await req.json()
+  const body: any = await req.json()
   const { slug, title, content, excerpt, cover_image, author_name, tags, is_published, is_featured } = body
 
   const db = await getDB()

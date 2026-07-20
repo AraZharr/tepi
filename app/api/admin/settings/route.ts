@@ -25,7 +25,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
-  const body = await req.json()
+  const body: any = await req.json()
   const db = await getDB()
   const now = new Date().toISOString().replace('T', ' ').replace(/\..*/, '')
 

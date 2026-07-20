@@ -96,7 +96,7 @@ async function callGroq(messages: { role: string; content: string }[]) {
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json()
+    const { messages }: any = await req.json()
     if (!messages?.length) {
       return NextResponse.json({ error: 'No messages' }, { status: 400 })
     }

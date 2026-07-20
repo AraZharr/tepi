@@ -3,7 +3,7 @@ import { getDB } from '@/lib/db'
 import { notifAbuseReport } from '@/lib/admin-notif'
 
 export async function POST(req: Request) {
-  const body = await req.json()
+  const body: any = await req.json()
   const { subdomain_name, reporter_email, reason } = body
 
   if (!subdomain_name || !reason) {

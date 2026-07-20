@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  const body: any = await req.json()
   const { subdomain_id, action, turnstile_token } = body
 
   if (!subdomain_id || !action) {

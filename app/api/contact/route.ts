@@ -3,7 +3,7 @@ import { getDB } from '@/lib/db'
 import { notifNewContact } from '@/lib/admin-notif'
 
 export async function POST(req: Request) {
-  const body = await req.json()
+  const body: any = await req.json()
   const { name, email, subject, message } = body
 
   if (!name || !email || !message) {
