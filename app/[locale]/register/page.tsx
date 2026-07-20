@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import TurnstileWidget from '@/components/TurnstileWidget'
 import { useRouter } from 'next/navigation'
+import { EyeIcon, EyeOffIcon } from 'lucide-react'
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'form' | 'otp'>('form')
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -135,8 +137,14 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Password</label>
-              <input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)}
-                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark" />
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} required minLength={6} value={password} onChange={e => setPassword(e.target.value)}
+                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm pr-10 focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-1">
+                  {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                </button>
+              </div>
               <p className="mt-1 text-xs text-text-muted">Minimal 6 karakter</p>
             </div>
 

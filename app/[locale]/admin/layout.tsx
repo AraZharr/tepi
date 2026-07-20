@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
+import LogoutButton from '@/components/LogoutButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,8 +41,12 @@ export default async function AdminLayout({
           <AdminLink href="/admin/activity" label="Activity" />
           <AdminLink href="/admin/payments" label="Payments" />
           <AdminLink href="/admin/settings" label="Settings" />
-          <div className="mt-6 pt-4 border-t border-border dark:border-border-dark">
-            <AdminLink href="/" label="← Lihat Situs" />
+          <div className="mt-6 pt-4 border-t border-border dark:border-border-dark flex flex-col gap-1">
+            <a href="/dashboard" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              Dashboard
+            </a>
+            <LogoutButton />
           </div>
         </aside>
         <main className="flex-1">{children}</main>
