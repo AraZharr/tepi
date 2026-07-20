@@ -38,7 +38,7 @@ ${action ? `<a href="${action.url}" style="display:inline-block;margin-top:20px;
 /** Kirim notif ke admin via Resend */
 export async function adminNotif(subject: string, html: string) {
   const to = process.env.ADMIN_NOTIF_EMAIL || process.env.NEXT_PUBLIC_EMAIL_ADDR || 'rizalrahmadi13@gmail.com'
-  const { sendEmail } = await import('./resend')
+  const { sendEmail } = await import('./email')
   return sendEmail({ to, subject, html }).catch(() => null)
 }
 
