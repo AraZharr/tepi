@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   const token = await createSessionToken(user.id)
-  const res = NextResponse.json({ token, user: { id: user.id, email, username, full_name: user.full_name } }, { status: 201 })
+  const res = NextResponse.json({ token, user: { id: user.id, email, username, full_name: user.full_name, role: user.role } }, { status: 201 })
   setSessionCookie(res, user.id)
   return res
 }
@@ -88,7 +88,7 @@ export async function PUT(request: Request) {
   }
 
   const token = await createSessionToken(user.id)
-  const res = NextResponse.json({ token, user: { id: user.id, email: user.email, username: user.username, full_name: user.full_name } }, { status: 200 })
+  const res = NextResponse.json({ token, user: { id: user.id, email: user.email, username: user.username, full_name: user.full_name, role: user.role } }, { status: 200 })
   setSessionCookie(res, user.id)
   return res
 }

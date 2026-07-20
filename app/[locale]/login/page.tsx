@@ -39,7 +39,9 @@ export default function LoginPage() {
 
       // User found and password matches — direct login
       if (data.token) {
-        router.push('/dashboard')
+        // Admin users go to /admin, regular users to /dashboard
+        const dest = data.user?.role === 'admin' ? '/admin' : '/dashboard'
+        router.push(dest)
         router.refresh()
         return
       }
