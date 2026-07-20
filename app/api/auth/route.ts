@@ -3,6 +3,31 @@ import { cookies } from 'next/headers'
 import { getDB } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
 import { hashPassword, verifyPassword, createSessionToken, verifySessionToken, setSessionCookie, clearSessionCookie, getSessionUser, requireUser, issueOtp, consumeOtp, findUserByIdentifier } from '@/lib/auth'
+import { isDisposableEmail, EMAIL_DOMAIN_BLOCKED_MESSAGE } from '@/lib/temp-mail'
+
+async function validateDomainHasMX(domain: string): Promise<boolean> {
+  // Use Cloudflare's DNS over HTTPS resolver (1.1.1.10 is Cloudflare's public DNS)
+  // MX record verification to ensure domain can receive email.
+  const url = `https://1.1.1.10/dns-query?name=${encodeURIComponent(domain)}&type=MX`
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2000)
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { accept: 'application/dns-json' },
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (!resp.ok) return false
+    const json = await resp.json()
+    // RFC 1035: answer array length > 0 indicates existence of MX record(s)
+    return Array.isArray(json.Answer) && json.Answer.length > 0
+  } catch {
+    // Network error / timeout → treat as invalid; block domain to be safe.
+    return false
+  }
+}
+import { isDisposableEmail, EMAIL_DOMAIN_BLOCKED_MESSAGE } from '@/lib/temp-mail'
 
 export async function POST(request: Request) {
   const body: any = await request.json()
@@ -11,8 +36,18 @@ export async function POST(request: Request) {
   if (!email || typeof email !== 'string') {
     return NextResponse.json({ error: 'Email wajib diisi' }, { status: 400 })
   }
-  if (!password || typeof password !== 'string' || password.length < 6) {
-    return NextResponse.json({ error: 'Password minimal 6 karakter' }, { status: 400 })
+
+  const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase().trim()
+
+  // 1. Cek Reputasi (Disposable Mail)
+  if (isDisposableEmail(email)) {
+    return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
+  }
+
+  // 2. Cek Validitas MX (DNS)
+  const hasMX = await validateDomainHasMX(domain)
+  if (!hasMX) {
+    return NextResponse.json({ error: 'Domain email tidak valid atau tidak memiliki record penerimaan email (MX).' }, { status: 403 })
   }
 
   const user = await findUserByIdentifier(email)

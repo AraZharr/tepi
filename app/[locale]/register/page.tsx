@@ -7,6 +7,7 @@ import TurnstileWidget from '@/components/TurnstileWidget'
 import { useRouter } from 'next/navigation'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import { PasswordStrength } from '@/components/PasswordStrength'
+import { isDisposableEmail } from '@/lib/temp-mail'
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'form' | 'otp'>('form')
