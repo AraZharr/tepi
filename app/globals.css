@@ -3,119 +3,204 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────────────
-   CSS Variables — sesuai design.md §2
-   Dipakai untuk kasus yang butuh CSS variable murni (misal inline style,
-   atau di luar konteks Tailwind class). Untuk styling komponen sehari-hari,
-   utamakan Tailwind class dari tailwind.config.ts (mis. bg-blue, text-red).
+   TEPI DESIGN SYSTEM — TOKENS
+   Sumber: DESIGN.md §3 (Color & Glass) + §5 (Motion) + §4 (Responsive)
+   Semua nilai di bawah HANYA merefer ke design tokens. Jangan hardcode
+   magic numbers di luar file ini.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Primary — Biru Elektrik (light mode) */
-  --blue: #2563EB;
-  --blue-hover: #1D4ED8;
-  --blue-subtle: #EFF6FF;
+  /* ── Brand Colors (DESIGN.md §3) ── */
+  --c-primary: #1570EF;
+  --c-primary-hover: #0F5BCC;
+  --c-secondary: #58C7FF;
+  --c-accent: #AEEBFF;
+  --c-white: #FFFFFF;
+  --c-sand: #FFF7EA;
 
-  /* Accent — Merah tipis (HANYA dekoratif — lihat design.md §2 & §13) */
+  /* ── Semantic Aliases (untuk compatibility dengan Tailwind + legacy class) ── */
+  --blue: #1570EF;
+  --blue-hover: #0F5BCC;
+  --blue-subtle: #EAF3FF;
+
   --red: #EF4444;
   --red-subtle: #FEF2F2;
 
-  /* Background & Surface */
-  --bg: #FFFFFF;
-  --surface: #F8FAFC;
-  --surface-2: #F1F5F9;
+  /* ── Glass System (DESIGN.md §3) ── */
+  --glass-deco: rgba(255, 255, 255, 0.10);
+  --glass-deco-border: rgba(255, 255, 255, 0.18);
+  --glass-content: rgba(10, 20, 40, 0.35);
+  --glass-content-dark: rgba(15, 30, 60, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: 24px;
 
-  /* Teks */
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
+  /* ── Background & Surface ── */
+  --bg: #FFF7EA;
+  --surface: #FFFFFF;
+  --surface-2: #FFF1DC;
 
-  /* Border */
-  --border: #E5E7EB;
-  --border-focus: var(--blue);
+  /* ── Typography (DESIGN.md §3) ── */
+  --font-heading: var(--font-jakarta), system-ui, sans-serif;
+  --font-body: var(--font-jakarta), system-ui, sans-serif;
+  --font-logo: var(--font-kaushan), cursive;
 
-  /* Status */
+  /* ── Text (light mode) ── */
+  --text-primary: #0B1F33;
+  --text-secondary: #4A6079;
+  --text-muted: #7A8BA0;
+
+  /* ── Border ── */
+  --border: #E6E0D4;
+  --border-focus: var(--c-primary);
+
+  /* ── Status ── */
   --success: #10B981;
   --warning: #F59E0B;
-  --error: var(--red);
-  --info: var(--blue);
+  --error: #EF4444;
+  --info: #1570EF;
 
-  /* Shadow */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
-  --shadow-blue: 0 4px 16px rgba(37,99,235,0.25);
+  /* ── Radius Scale (DESIGN.md §9) ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-xxl: 32px;
+
+  /* ── Shadow Scale (DESIGN.md §9) ── */
+  --shadow-sm: 0 1px 3px rgba(10, 30, 60, 0.06), 0 1px 2px rgba(10, 30, 60, 0.04);
+  --shadow-md: 0 4px 12px rgba(10, 30, 60, 0.08), 0 2px 4px rgba(10, 30, 60, 0.04);
+  --shadow-lg: 0 12px 32px rgba(10, 30, 60, 0.10), 0 4px 8px rgba(10, 30, 60, 0.06);
+  --shadow-blue: 0 4px 20px rgba(21, 112, 239, 0.25);
+  --shadow-glass: 0 8px 32px rgba(21, 112, 239, 0.12);
+
+  /* ── Motion Tokens (DESIGN.md §5) ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --dur-hover: 200ms;
+  --dur-reveal: 450ms;
+  --dur-float: 8s;
+  --dur-cloud: 90s;
+  --dur-wave: 12s;
+  --dur-ripple: 300ms;
+
+  /* ── Spacing Scale (fluid, DESIGN.md §4) ── */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: clamp(2rem, 4vw, 3rem);
+  --space-2xl: clamp(3rem, 6vw, 5rem);
+
+  /* ── Z-index ── */
+  --z-bg: -1;
+  --z-content: 1;
+  --z-nav: 50;
+  --z-modal: 100;
+  --z-toast: 200;
 }
 
 .dark {
-  /* Primary — Biru Elektrik (dark mode, lebih terang agar kontras di navy) */
-  --blue: #3B82F6;
-  --blue-hover: #60A5FA;
-  --blue-subtle: #1E3A5F;
+  --bg: #0A1424;
+  --surface: #122033;
+  --surface-2: #1A2C42;
 
-  /* Accent — Merah tipis (dark mode) */
-  --red: #EF4444;
-  --red-subtle: #3B0E0E;
+  --text-primary: #F2F7FF;
+  --text-secondary: #A8BBD0;
+  --text-muted: #6C829B;
 
-  /* Background & Surface */
-  --bg: #0F172A;
-  --surface: #1E293B;
-  --surface-2: #263449;
+  --border: #243span;
+  --border: #24344A;
 
-  /* Teks */
-  --text-primary: #F9FAFB;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-
-  /* Border */
-  --border: #334155;
-
-  /* Shadow — opacity dikurangi ~50% di dark mode, lihat design.md §6 */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.02);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.03);
+  --glass-content: rgba(15, 30, 60, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Base Styles
+   GLASS UTILITIES
    ───────────────────────────────────────────────────────────────────────── */
 
-* {
+.glass {
+  background: var(--glass-deco);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-deco-border);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-content {
+  background: var(--glass-content);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  color: var(--c-white);
+}
+
+.dark .glass-content {
+  background: var(--glass-content-dark);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BASE STYLES (DESIGN.md §4 Stability + §9 Responsive)
+   ───────────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   border-color: var(--border);
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--bg);
   color: var(--text-primary);
-  font-family: var(--font-inter), system-ui, sans-serif;
-  transition: background 0.3s ease, color 0.3s ease;
+  font-family: var(--font-body);
+  margin: 0;
+  min-height: 100vh;
+  transition: background-color 0.3s var(--ease-smooth), color 0.3s var(--ease-smooth);
 }
 
-/* Transisi halus saat toggle dark/light — lihat design.md §8 */
-body,
-body * {
-  transition-property: background-color, border-color, color;
-  transition-duration: 0.15s;
-  transition-timing-function: ease;
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
-/* Dot grid background — HANYA dipakai di landing page, lihat design.md §9 */
-.dot-grid-bg {
-  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.5;
+/* Respect reduced motion (DESIGN.md §5) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-/* Scrollbar tipis, konsisten di kedua mode */
+/* Focus ring (DESIGN.md §9 A11y) */
+:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);

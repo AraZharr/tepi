@@ -6,6 +6,7 @@ import Link from 'next/link'
 import TurnstileWidget from '@/components/TurnstileWidget'
 import { useRouter } from 'next/navigation'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
+import { PasswordStrength } from '@/components/PasswordStrength'
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'form' | 'otp'>('form')
@@ -145,7 +146,7 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-text-muted">Minimal 6 karakter</p>
+              <PasswordStrength password={password} />
             </div>
 
             <TurnstileWidget onVerify={setTurnstileToken} />
