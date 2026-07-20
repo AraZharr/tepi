@@ -29,7 +29,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: identifier, password, identifier }),
       })
-      const data = await res.json()
+      const data: any = await res.json()
 
       if (!res.ok) {
         setError(data.error)
@@ -80,7 +80,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: otp, identifier, password }),
       })
-      const data = await res.json()
+      const data: any = await res.json()
 
       if (!res.ok) { setError(data.error); setLoading(false); return }
 

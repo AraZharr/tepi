@@ -39,7 +39,7 @@ export default function AdminPage() {
     try {
       const res = await fetch('/api/admin/applications')
       if (res.status === 403) { router.push('/dashboard'); return }
-      const d = await res.json()
+      const d: any = await res.json()
       setApplications(d.pending || [])
     } catch { /* ignore */ }
     setLoading(false)

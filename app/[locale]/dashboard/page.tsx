@@ -62,7 +62,7 @@ export default function DashboardPage() {
   async function fetchData() {
     try {
       const res = await fetch('/api/user/subdomains')
-      const d = await res.json()
+      const d: any = await res.json()
       setData(d)
     } catch { /* ignore */ }
     setLoading(false)
@@ -78,7 +78,7 @@ export default function DashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
-    const result = await res.json()
+    const result: any = await res.json()
     setFormLoading(false)
 
     if (!res.ok) {

@@ -27,7 +27,7 @@ export default function InvoicesPage() {
 
   async function fetchInvoices() {
     const res = await fetch('/api/user/invoices')
-    const data = await res.json()
+    const data: any = await res.json()
     setInvoices(data.invoices)
     setLoading(false)
   }

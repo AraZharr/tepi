@@ -20,7 +20,7 @@ export default function AdminActivityPage() {
   async function fetchLogs() {
     const res = await fetch('/api/admin/activity')
     if (res.status === 403) { router.push('/dashboard'); return }
-    const d = await res.json()
+    const d: any = await res.json()
     setLogs(d.logs || [])
     setLoading(false)
   }

@@ -26,7 +26,7 @@ export default function AdminBlogPage() {
   async function fetchPosts() {
     const res = await fetch('/api/admin/blog')
     if (res.status === 403) { router.push('/dashboard'); return }
-    const d = await res.json()
+    const d: any = await res.json()
     setPosts(d.posts || [])
     setLoading(false)
   }
@@ -48,7 +48,7 @@ export default function AdminBlogPage() {
     const url = editId === 'new' ? '/api/admin/blog' : `/api/admin/blog/${editId}`
     const method = editId === 'new' ? 'POST' : 'PUT'
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-    const d = await res.json()
+    const d: any = await res.json()
     setSaving(false)
 
     if (!res.ok) { setMsg(`❌ ${d.error}`); return }

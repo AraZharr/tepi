@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
   async function fetchSettings() {
     const res = await fetch('/api/admin/settings')
     if (res.status === 403) { router.push('/dashboard'); return }
-    const d = await res.json()
+    const d: any = await res.json()
     setSettings(d.settings || {})
     setLoading(false)
   }

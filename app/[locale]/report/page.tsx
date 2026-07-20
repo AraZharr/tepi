@@ -20,7 +20,7 @@ export default function ReportAbusePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
-    const data = await res.json()
+    const data: any = await res.json()
     setLoading(false)
 
     if (!res.ok) { setError(data.error); return }

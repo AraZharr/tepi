@@ -22,7 +22,7 @@ export default function InvoiceDetailPage() {
   async function fetchInvoice() {
     const res = await fetch(`/api/user/invoices/${params.id}`)
     if (res.status === 404) { router.push('/dashboard/invoices'); return }
-    const data = await res.json()
+    const data: any = await res.json()
     setInv(data.invoice)
     setLoading(false)
   }

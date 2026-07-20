@@ -31,7 +31,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, username, fullName }),
       })
-      const data = await res.json()
+      const data: any = await res.json()
 
       if (!res.ok) { setError(data.error); setLoading(false); return }
 
@@ -59,7 +59,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: otp, email, password }),
       })
-      const data = await res.json()
+      const data: any = await res.json()
 
       if (!res.ok) { setError(data.error); setLoading(false); return }
 
