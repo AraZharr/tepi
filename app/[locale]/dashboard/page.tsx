@@ -52,7 +52,7 @@ export default function DashboardPage() {
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then(d => {
+    fetch('/api/auth').then(r => r.json()).then((d: any) => {
       if (!d.user) { router.push('/login'); return }
       setUser(d.user)
       fetchData()
