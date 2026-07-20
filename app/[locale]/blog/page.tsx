@@ -3,6 +3,8 @@ import { setRequestLocale } from 'next-intl/server'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Blog & Testimoni | tepi.my.id',
   description: 'Baca kisah sukses pengguna tepi.my.id — subdomain gratis untuk developer Indonesia.',

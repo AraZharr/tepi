@@ -2,6 +2,8 @@ import { getDB } from '@/lib/db'
 import { setRequestLocale } from 'next-intl/server'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 interface Props { params: Promise<{ locale: string; slug: string }> }
 
 export async function generateMetadata({ params }: Props) {

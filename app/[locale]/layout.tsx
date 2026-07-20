@@ -9,6 +9,9 @@ import Footer from '@/components/Footer'
 import '../globals.css'
 import ChatWidget from '@/components/ChatWidget'
 
+// Footer + auth pages hit D1 via getCloudflareContext — must not prerender static
+export const dynamic = 'force-dynamic'
+
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['700', '800'],

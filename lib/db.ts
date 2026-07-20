@@ -9,6 +9,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare'
  *   const result = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first()
  */
 export async function getDB(): Promise<D1Database> {
-  const { env } = getCloudflareContext()
+  // async:true wajib — sync mode crash di static/prerender routes
+  const { env } = await getCloudflareContext({ async: true })
   return env.DB
 }
