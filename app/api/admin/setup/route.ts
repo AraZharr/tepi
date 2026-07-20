@@ -23,7 +23,7 @@ export async function GET() {
   if (!existing) {
     await db.prepare(
       'INSERT INTO users (id, email, full_name, role, subdomain_limit) VALUES (?, ?, ?, ?, ?)'
-    ).bind(user.id, user.email || '', user.user_metadata?.full_name || 'Admin', 'admin', 999).run()
+    ).bind(user.id, user.email || '', user.full_name || 'Admin', 'admin', 999).run()
   } else {
     await db.prepare(
       'UPDATE users SET role = ?, subdomain_limit = ? WHERE id = ?'

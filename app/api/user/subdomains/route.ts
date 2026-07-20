@@ -122,7 +122,7 @@ export async function POST(req: Request) {
 
   // Push notif admin
   notifNewApplication(
-    user.user_metadata?.full_name as string || user.email?.split('@')[0] || user.id,
+    user.full_name || user.email?.split('@')[0] || user.id,
     user.email || '',
     subdomain_name,
     project_description,
