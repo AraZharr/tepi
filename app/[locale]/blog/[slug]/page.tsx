@@ -53,14 +53,14 @@ export default async function BlogPostPage({ params }: Props) {
       </nav>
 
       <article className="mx-auto max-w-3xl px-4 py-12">
-        {post.cover_image && (
+        {!!post.cover_image && (
           <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg bg-surface-2 dark:bg-surface-2-dark">
             <img src={post.cover_image as string} alt={post.title as string} className="h-full w-full object-cover" />
           </div>
         )}
 
         <div className="mb-2 flex items-center gap-3 text-sm text-text-muted">
-          {post.tags && <span className="text-xs font-semibold uppercase tracking-wider text-blue">{(post.tags as string).split(',')[0]}</span>}
+          {!!post.tags && <span className="text-xs font-semibold uppercase tracking-wider text-blue">{(post.tags as string).split(',')[0]}</span>}
           <span>{post.author_name as string}</span>
           <span>·</span>
           <span>{post.published_at as string}</span>
@@ -68,7 +68,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         <h1 className="font-heading text-3xl font-extrabold text-text-primary dark:text-text-primary-dark md:text-4xl">{post.title as string}</h1>
 
-        {post.excerpt && <p className="mt-4 text-lg text-text-secondary dark:text-text-secondary-dark">{post.excerpt as string}</p>}
+        {!!post.excerpt && <p className="mt-4 text-lg text-text-secondary dark:text-text-secondary-dark">{post.excerpt as string}</p>}
 
         <div
           className="mt-8 prose prose-sm md:prose-base dark:prose-invert max-w-none"

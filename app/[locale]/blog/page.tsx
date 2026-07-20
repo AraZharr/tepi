@@ -41,15 +41,15 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
             {list.map((post: any) => (
               <Link key={post.slug} href={`/${locale}/blog/${post.slug}`} className="group block">
                 <Card className="h-full overflow-hidden transition-all hover:shadow-md">
-                  {post.cover_image && (
+                  {!!post.cover_image && (
                     <div className="aspect-video w-full overflow-hidden bg-surface-2 dark:bg-surface-2-dark">
                       <img src={post.cover_image} alt={post.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                     </div>
                   )}
                   <div className="p-5">
-                    {post.tags && <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-blue">{post.tags}</p>}
+                    {!!post.tags && <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-blue">{post.tags}</p>}
                     <h2 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark group-hover:text-blue transition-colors">{post.title}</h2>
-                    {post.excerpt && <p className="mt-2 text-sm text-text-secondary dark:text-text-secondary-dark line-clamp-2">{post.excerpt}</p>}
+                    {!!post.excerpt && <p className="mt-2 text-sm text-text-secondary dark:text-text-secondary-dark line-clamp-2">{post.excerpt}</p>}
                     <div className="mt-3 flex items-center gap-3 text-xs text-text-muted">
                       <span>{post.author_name}</span>
                       <span>·</span>
