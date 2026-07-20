@@ -43,3 +43,6 @@ jobs:
           PAYWUZ_API_KEY: ${{ secrets.PAYWUZ_API_KEY }}
           PAYWUZ_MERCHANT_ID: ${{ secrets.PAYWUZ_MERCHANT_ID }}
           ADMIN_USER_ID: ${{ secrets.ADMIN_USER_ID }}
+          # Optional - uncomment when ready
+          #PAYWUZ_API_KEY: ${{ secrets.PAYWUZ_API_KEY }}
+          #PAYWUZ_MERCHANT_ID: ${{ secrets.PAYWUZ_MERCHANT_ID }}
