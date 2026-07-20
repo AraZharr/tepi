@@ -12,7 +12,8 @@ export default function AdminAbusePage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then(({ user }) => {
+    fetch('/api/auth').then(r => r.json()).then((data: any) => {
+      const user = data?.user
       if (!user) { router.push('/login'); return }
       fetchData()
     })

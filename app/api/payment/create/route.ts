@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { generateInvoiceNumber } from '@/lib/invoice'
-import { createPaywuzOrder } from '@/lib/paywuz'
+import { createSubdomainRenewalOrder } from '@/lib/paywuz'
 
 export async function GET(req: Request) {
   const user = await getSessionUser()
@@ -28,21 +28,23 @@ export async function GET(req: Request) {
   ).bind(user.id, subdomainId, orderId, invoiceNumber).run()
 
   try {
-    const payment = await createPaywuzOrder({
-      amount: 5000,
-      orderId,
-      customerEmail: user.email || '',
-      customerName: user.user_metadata?.full_name as string || '',
-      description: `Upgrade ${subdomain.name as string}.tepi.my.id — 1 tahun | Invoice: ${invoiceNumber}`,
+    const result = await createSubdomainRenewalOrder({
+      subdomainId: Number(subdomainId),
+      subdomainName: subdomain.name as string || '',
+      userId: user.id,
     })
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
-      qr_url: payment.qr_url,
-      qr_image: payment.qr_image,
+      qr_url: result.data.paymentUrl,
+      qr_image: result.data.paymentNumber,
       order_id: orderId,
       invoice_number: invoiceNumber,
-      expires_at: payment.expired_at,
+      expires_at: result.data.expiresAt,
     })
   } catch {
     return NextResponse.json({ error: 'Gagal membuat pembayaran. Coba lagi.' }, { status: 500 })
