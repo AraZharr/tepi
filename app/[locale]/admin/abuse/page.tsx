@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { csrfFetch } from '@/lib/csrf-client'
 
 export default function AdminAbusePage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function AdminAbusePage() {
 
   async function updateStatus(id: string, status: string) {
     setActionLoading(id)
-    await fetch('/api/admin/abuse', {
+    await csrfFetch('/api/admin/abuse', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),

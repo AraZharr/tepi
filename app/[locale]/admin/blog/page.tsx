@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { csrfFetch } from '@/lib/csrf-client'
 
 export default function AdminBlogPage() {
   const router = useRouter()
@@ -47,7 +48,7 @@ export default function AdminBlogPage() {
 
     const url = editId === 'new' ? '/api/admin/blog' : `/api/admin/blog/${editId}`
     const method = editId === 'new' ? 'POST' : 'PUT'
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const res = await csrfFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     const d: any = await res.json()
     setSaving(false)
 
@@ -58,7 +59,7 @@ export default function AdminBlogPage() {
   }
 
   async function del(id: string) {
-    await fetch(`/api/admin/blog/${id}`, { method: 'DELETE' })
+    await csrfFetch(`/api/admin/blog/${id}`, { method: 'DELETE' })
     setDeleteConfirm(null)
     fetchPosts()
   }

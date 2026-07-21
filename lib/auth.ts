@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
+import { setCsrfCookie, clearCsrfCookie } from '@/lib/csrf'
 
 const SESSION_COOKIE = 'tepi_session'
 const OTP_TTL_MS = 10 * 60 * 1000
@@ -101,11 +102,14 @@ export function sessionCookieOptions(maxAge = SESSION_TTL_SEC) {
 export async function setSessionCookie(res: NextResponse, userId: string) {
   const token = await createSessionToken(userId)
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions())
+  // Rotate CSRF on login — binds session to a fresh double-submit token
+  setCsrfCookie(res)
   return token
 }
 
 export function clearSessionCookie(res: NextResponse) {
   res.cookies.set(SESSION_COOKIE, '', sessionCookieOptions(0))
+  clearCsrfCookie(res)
 }
 
 export async function getSessionUser(): Promise<AuthUser | null> {

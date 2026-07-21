@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { csrfFetch } from '@/lib/csrf-client'
 
 export default function AdminSettingsPage() {
   const router = useRouter()
@@ -30,7 +31,7 @@ export default function AdminSettingsPage() {
 
   async function save() {
     setSaving(true)
-    const res = await fetch('/api/admin/settings', {
+    const res = await csrfFetch('/api/admin/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),

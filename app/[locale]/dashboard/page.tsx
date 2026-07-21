@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { csrfFetch } from '@/lib/csrf-client'
 
 const PLATFORMS = [
   { value: 'github_pages', label: 'GitHub Pages' },
@@ -73,7 +74,7 @@ export default function DashboardPage() {
     setFormError(null)
     setFormLoading(true)
 
-    const res = await fetch('/api/user/subdomains', {
+    const res = await csrfFetch('/api/user/subdomains', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
@@ -91,7 +92,7 @@ export default function DashboardPage() {
   }
 
   async function handleLogout() {
-    await fetch('/api/auth', { method: 'DELETE' })
+    await csrfFetch('/api/auth', { method: 'DELETE' })
     router.push('/login')
     router.refresh()
   }

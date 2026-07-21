@@ -2,12 +2,13 @@
 
 import { useRouter } from 'next/navigation'
 import { LogOutIcon } from 'lucide-react'
+import { csrfFetch } from '@/lib/csrf-client'
 
 export default function LogoutButton() {
   const router = useRouter()
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await csrfFetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
     router.refresh()
   }

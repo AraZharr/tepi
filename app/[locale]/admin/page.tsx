@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { csrfFetch } from '@/lib/csrf-client'
 
 const PLATFORMS: Record<string, string> = {
   github_pages: 'GitHub Pages', vercel: 'Vercel', cloudflare_pages: 'Cloudflare Pages', vps: 'VPS', other: 'Lainnya',
@@ -47,7 +48,7 @@ export default function AdminPage() {
 
   async function handleApprove(id: string) {
     setActionLoading(id)
-    const res = await fetch(`/api/admin/applications/${id}`, {
+    const res = await csrfFetch(`/api/admin/applications/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'approved' }),
     })
@@ -58,7 +59,7 @@ export default function AdminPage() {
   async function handleReject() {
     if (!rejectModal || !rejectReason.trim()) return
     setActionLoading(rejectModal.id)
-    const res = await fetch(`/api/admin/applications/${rejectModal.id}`, {
+    const res = await csrfFetch(`/api/admin/applications/${rejectModal.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'rejected', reject_reason: rejectReason.trim() }),
     })
