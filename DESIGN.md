@@ -25,6 +25,8 @@ Redesign the entire Tepi website into a premium, cohesive, production-ready expe
 - **Primary:** `#1570EF` (Deep Blue)
 - **Secondary:** `#58C7FF` (Sky Blue)
 - **Accent:** `#AEEBFF` (Light Cyan)
+- **Highlight:** `#FF3B7F` (Pink/Magenta — CTA, badge, event highlight)
+- **Dark Base:** `#0E1330` (Navy deep — hero, section backgrounds)
 - **White:** `#FFFFFF`
 - **Sand:** `#FFF7EA` (Warm Background)
 
@@ -96,8 +98,25 @@ TEPI admin routes follow the same structural pattern as AZR:
 ### Phase 1: Design Tokens
 Overhaul `globals.css`. Define variables for colors, glass, radius, shadows, and motion. Setup `next/font` for Typography (Plus Jakarta Sans + Kaushan Script).
 
-### Phase 2: OceanScene (The Atmosphere)
+### Phase 2: OceanScene & Hero (The Atmosphere)
 Hybrid Background: CSS Sky/Ocean gradients + SVG Clouds + Wave animations + 1 Slot for High-res Hero Image (`/public/hero-beach.webp`).
+
+**Hero Section (Japan Jam–inspired split layout):**
+```
+┌──────────────────────────────────┐
+│ ┌───────────┬──────────────────┐ │
+│ │           │  JAPAN JAM       │ │
+│ │  SLOT     │  HEADLINE        │ │
+│ │  KOSONG   │  SUBTITLE        │ │
+│ │  (div)    │  [CTA BUTTON]    │ │
+│ │           │  social / links  │ │
+│ └───────────┴──────────────────┘ │
+└──────────────────────────────────┘
+```
+- Left slot: placeholder `<div>` with aspect-ratio, flex center — user inserts PNG/logo/character later
+- Right: Tagline, CTA, social links
+- Background: Dark Base `#0E1330` + glass overlay
+- Accent pink `#FF3B7F` on CTA/highlights
 
 ### Phase 3: Global Shell
 Redesign Navbar, Footer, Layout Wrappers, and Hero Section.
