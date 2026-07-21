@@ -32,6 +32,18 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark">
+      {/* Mobile top bar — sidebar hidden <md */}
+      <header className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 dark:border-border-dark dark:bg-surface-dark">
+        <p className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">Admin</p>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <a href="/dashboard" className="rounded-md px-2 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-2 dark:hover:bg-surface-2-dark">
+            Dashboard
+          </a>
+          <LogoutButton />
+        </div>
+      </header>
+
       <div className="flex gap-0">
         <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-surface dark:border-border-dark dark:bg-surface-dark p-4 gap-1">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Admin Panel</p>
