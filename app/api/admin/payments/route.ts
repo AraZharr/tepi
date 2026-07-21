@@ -1,22 +1,9 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
 
-const guard = async () => {
-  const user = await getSessionUser()
-  if (!user) throw new Error('Forbidden')
-  let isAdmin = user.id === process.env.ADMIN_USER_ID
-  if (!isAdmin) {
-    const db = await getDB()
-    const r = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
-    isAdmin = r?.role === 'admin'
-  }
-  if (!isAdmin) throw new Error('Forbidden')
-  return user
-}
-
 export async function GET() {
-  try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
   const db = await getDB()
   const payments = await db.prepare(
@@ -26,7 +13,6 @@ export async function GET() {
      ORDER BY p.created_at DESC LIMIT 100`
   ).all()
 
-  // Stats
   const stats = await db.prepare(
     `SELECT
        COUNT(*) as total,

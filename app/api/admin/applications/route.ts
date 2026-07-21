@@ -1,22 +1,9 @@
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
-import { getSessionUser } from '@/lib/auth'
-
-async function isAdmin(): Promise<boolean> {
-  const user = await getSessionUser()
-  if (!user) return false
-  if (user.id === process.env.ADMIN_USER_ID) return true // fallback
-  try {
-    const db = await getDB()
-    const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
-    return record?.role === 'admin'
-  } catch { return false }
-}
 
 export async function GET() {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
   const db = await getDB()
 

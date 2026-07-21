@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
 
-const guard = async () => {
-  const user = await getSessionUser()
-  if (!user || user.id !== process.env.ADMIN_USER_ID) throw new Error('Forbidden')
-  return user
-}
-
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
   const { id } = await params
   const body: any = await req.json()
@@ -17,7 +11,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const db = await getDB()
 
-  // Check slug uniqueness (exclude current)
   if (slug) {
     const existing = await db.prepare('SELECT id FROM posts WHERE slug = ? AND id != ?').bind(slug, id).first()
     if (existing) return NextResponse.json({ error: 'Slug already used' }, { status: 409 })
@@ -53,8 +46,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ success: true })
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try { await guard() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
   const { id } = await params
   const db = await getDB()

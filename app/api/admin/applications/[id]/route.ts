@@ -1,23 +1,15 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
 import { createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getSessionUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-  let isAdmin = user.id === process.env.ADMIN_USER_ID
-  if (!isAdmin) {
-    try {
-      const db = await getDB()
-      const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
-      isAdmin = record?.role === 'admin'
-    } catch { /* fallback */ }
+  let user
+  try { user = await requireAdmin() } catch {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
-  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { status, reject_reason } = await req.json()
 

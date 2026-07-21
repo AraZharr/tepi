@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSessionUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
 export async function GET() {
   const db = await getDB()
@@ -13,8 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await getSessionUser()
-  if (!user || user.id !== process.env.ADMIN_USER_ID) {
+  try { await requireAdmin() } catch {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

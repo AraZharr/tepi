@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/auth'
-import { getDB } from '@/lib/db'
+import { isAdminUser } from '@/lib/admin'
 import LogoutButton from '@/components/LogoutButton'
 import NotificationBell from '@/components/NotificationBell'
 
@@ -14,14 +14,7 @@ export default async function AdminLayout({
   const user = await getSessionUser()
   if (!user) { redirect('/login') }
 
-  let isAdmin = false
-  try {
-    const db = await getDB()
-    const record = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user.id).first() as any
-    if (record?.role === 'admin') isAdmin = true
-  } catch { /* use env fallback */ }
-
-  if (!isAdmin && user.id !== process.env.ADMIN_USER_ID) { redirect('/dashboard') }
+  if (!(await isAdminUser(user.id))) { redirect('/dashboard') }
 
   const AdminLink = ({ href, label }: { href: string; label: string }) => (
     <a href={href}
