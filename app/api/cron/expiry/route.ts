@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { deleteDNSRecord } from '@/lib/cloudflare-dns'
+import { createNotification } from '@/lib/notifications'
 
 // ============================================================
 // Expiry Cron — dipanggil oleh cron job external (GitHub Actions)
@@ -35,6 +36,13 @@ export async function GET(req: Request) {
     try {
       // Send email reminder (via Resend)
       results.push(`Reminder sent for ${sd.name}.tepi.my.id (expires ${sd.expires_at})`)
+      // In-app notif
+      await createNotification(
+        sd.user_id, 'subdomain_expiring',
+        'Subdomain akan kedaluwarsa ⏰',
+        `${sd.name}.tepi.my.id akan expired dalam 7 hari. Perpanjang sekarang!`,
+        '/dashboard/invoices'
+      )
       // Mark notification sent
       await db.prepare(
         'INSERT INTO expiry_notifications (subdomain_id, type) VALUES (?, ?)'
@@ -51,6 +59,14 @@ export async function GET(req: Request) {
     await db.prepare(
       "UPDATE subdomains SET status = 'expired' WHERE id = ?"
     ).bind(sd.id).run()
+
+    // In-app notif
+    await createNotification(
+      sd.user_id, 'subdomain_expired',
+      'Subdomain expired ⚠️',
+      `${sd.name}.tepi.my.id sudah expired. Perpanjang dalam 14 hari sebelum dihapus.`,
+      '/dashboard/invoices'
+    )
 
     // Send expiry notification
     results.push(`Expired: ${sd.name}.tepi.my.id`)
