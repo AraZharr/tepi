@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
+import NotificationBell from '@/components/NotificationBell'
 
 const PLATFORMS = [
   { value: 'github_pages', label: 'GitHub Pages' },
@@ -107,6 +108,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <a href="/pricing" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Harga</a>
           <a href="/dashboard/invoices" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Invoice</a>
+          <NotificationBell />
           <span className="text-sm text-text-secondary dark:text-text-secondary-dark">{user?.email}</span>
           <Button variant="secondary" onClick={handleLogout} className="px-3 py-1 text-sm">Keluar</Button>
         </div>

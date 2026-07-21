@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/email'
+import { createNotification } from '@/lib/notifications'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSessionUser()
@@ -17,6 +18,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     } catch { /* fallback */ }
   }
   if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { status, reject_reason } = await req.json()
 
   if (!['approved', 'rejected'].includes(status)) {
     return NextResponse.json({ error: 'Status must be approved or rejected' }, { status: 400 })
@@ -51,6 +54,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         reject_reason
       ))
     } catch { /* email optional */ }
+
+    // In-app notif
+    await createNotification(
+      app.user_id as string, 'application_rejected',
+      'Pengajuan subdomain ditolak',
+      `Subdomain ${app.subdomain_name}.tepi.my.id tidak bisa disetujui. Alasan: ${reject_reason}`,
+      '/dashboard'
+    )
 
     return NextResponse.json({ success: true, action: 'rejected' })
   }
@@ -115,6 +126,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       ))
     } catch { /* email optional */ }
   }
+
+  // In-app notif
+  await createNotification(
+    app.user_id as string, 'application_approved',
+    'Subdomain disetujui! 🎉',
+    `Selamat! ${app.subdomain_name}.tepi.my.id kamu sudah aktif.`,
+    '/dashboard'
+  )
 
   return NextResponse.json({ success: true, action: 'approved' })
 }

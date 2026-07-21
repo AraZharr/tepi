@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
+import NotificationBell from '@/components/NotificationBell'
 
 const PLATFORMS: Record<string, string> = {
   github_pages: 'GitHub Pages', vercel: 'Vercel', cloudflare_pages: 'Cloudflare Pages', vps: 'VPS', other: 'Lainnya',
@@ -76,7 +77,10 @@ export default function AdminPage() {
       {/* Mobile nav */}
       <nav className="md:hidden flex items-center justify-between border-b border-border bg-surface px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">Admin</h1>
-        <span className="text-sm text-text-secondary">{user?.email}</span>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <span className="text-sm text-text-secondary">{user?.email}</span>
+        </div>
       </nav>
 
       <div className="mx-auto max-w-5xl px-4 py-8">
