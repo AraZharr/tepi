@@ -6,26 +6,29 @@ import { hashPassword, verifyPassword, createSessionToken, verifySessionToken, s
 import { isDisposableEmail, EMAIL_DOMAIN_BLOCKED_MESSAGE } from '@/lib/temp-mail'
 
 async function validateDomainHasMX(domain: string): Promise<boolean> {
-  // Use Cloudflare's DNS over HTTPS resolver (1.1.1.10 is Cloudflare's public DNS)
-  // MX record verification to ensure domain can receive email.
-  const url = `https://1.1.1.10/dns-query?name=${encodeURIComponent(domain)}&type=MX`
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 2000)
-    const resp = await fetch(url, {
-      method: 'GET',
-      headers: { accept: 'application/dns-json' },
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!resp.ok) return false
-    const json = await resp.json()
-    // RFC 1035: answer array length > 0 indicates existence of MX record(s)
-    return Array.isArray(json.Answer) && json.Answer.length > 0
-  } catch {
-    // Network error / timeout → treat as invalid; block domain to be safe.
-    return false
+  // DoH via cloudflare-dns.com — raw 1.1.1.10 IP often fails TLS from Workers
+  const resolvers = [
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
+    `https://1.1.1.1/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
+  ]
+  for (const url of resolvers) {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 2500)
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { accept: 'application/dns-json' },
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      if (!resp.ok) continue
+      const json = await resp.json() as { Answer?: unknown[] }
+      if (Array.isArray(json.Answer) && json.Answer.length > 0) return true
+    } catch {
+      // try next resolver
+    }
   }
+  return false
 }
 
 export async function POST(request: Request) {
@@ -38,19 +41,9 @@ export async function POST(request: Request) {
 
   const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase().trim()
 
-  // 1. Cek Reputasi (Disposable Mail)
-  if (isDisposableEmail(email)) {
-    return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
-  }
-
-  // 2. Cek Validitas MX (DNS)
-  const hasMX = await validateDomainHasMX(domain)
-  if (!hasMX) {
-    return NextResponse.json({ error: 'Domain email tidak valid atau tidak memiliki record penerimaan email (MX).' }, { status: 403 })
-  }
-
   const user = await findUserByIdentifier(email)
   if (user) {
+    // Login path — skip MX/disposable (already registered)
     if (user.is_suspended) {
       return NextResponse.json({ error: 'Akun sedang di-suspend' }, { status: 403 })
     }
@@ -61,9 +54,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Password salah' }, { status: 401 })
     }
   } else {
+    // Register path — anti-abuse checks only for new accounts
+    if (isDisposableEmail(email)) {
+      return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
+    }
+    const hasMX = await validateDomainHasMX(domain)
+    if (!hasMX) {
+      return NextResponse.json(
+        { error: 'Domain email tidak valid atau tidak memiliki record penerimaan email (MX).' },
+        { status: 403 },
+      )
+    }
+
     const passwordHash = await hashPassword(password)
     const userId = crypto.randomUUID()
-    const now = new Date().toISOString()
 
     await getDB().prepare(
       `INSERT INTO users (id, email, username, full_name, password_hash, role, subdomain_limit, email_verified)
