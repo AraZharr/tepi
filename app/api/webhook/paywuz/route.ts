@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { sendEmail, emailPaymentSuccess } from '@/lib/email'
 import { notifPaymentSuccess } from '@/lib/admin-notif'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * Paywuz Webhook — dipanggil Paywuz setelah pembayaran sukses/gagal
@@ -58,6 +59,14 @@ export async function POST(req: Request) {
         ).bind(payment.subdomain_id).first() as Record<string, unknown> | null
 
         if (subdomain) {
+          // In-app notif user
+          await createNotification(
+            subdomain.user_id as string, 'payment_success',
+            'Pembayaran berhasil 💰',
+            `Subdomain ${subdomain.name}.tepi.my.id diperpanjang hingga ${expiresAt}.`,
+            '/dashboard'
+          )
+
           try {
             await sendEmail(emailPaymentSuccess(
               (subdomain.full_name as string) || (subdomain.email as string),

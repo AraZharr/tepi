@@ -27,7 +27,6 @@ async function validateDomainHasMX(domain: string): Promise<boolean> {
     return false
   }
 }
-import { isDisposableEmail, EMAIL_DOMAIN_BLOCKED_MESSAGE } from '@/lib/temp-mail'
 
 export async function POST(request: Request) {
   const body: any = await request.json()
