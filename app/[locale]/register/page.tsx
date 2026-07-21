@@ -217,7 +217,7 @@ export default function RegisterPage() {
                 </button>
                 {(confirmPassword && passwordMatch) && (
                   <span className="absolute right-10 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-300" style={{ opacity: confirmSuccess ? 1 : 0 }}>
-                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="Display: block"="block" d="M5 13l4 4L19 7"></path></svg>
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                   </span>
                 )}
                 {(confirmPassword && !passwordMatch) && (
