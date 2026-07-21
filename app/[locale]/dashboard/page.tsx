@@ -103,7 +103,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
       {/* Nav */}
-      <nav className="flex items-center justify-between border-b border-border bg-surface px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
+      <nav className="flex items-center justify-between border-b border-border bg-surface px-4 sm:px-6 lg:px-8 py-3 dark:border-border-dark dark:bg-surface-dark">
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">tepi.my.id</h1>
         <div className="flex items-center gap-3">
           <a href="/pricing" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Harga</a>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Subdomain list */}
         <section className="mb-10">
           <h2 className="font-heading text-xl font-bold text-text-primary dark:text-text-primary-dark mb-4">Subdomain Kamu</h2>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
               Belum punya subdomain aktif. Ajukan satu!
             </Card>
           ) : (
-            <div className="grid gap-3">
+            <div className="gap-3">
               {data.subdomains.map((s) => {
                 let remaining = ''
                 if (s.expires_at) {
@@ -200,8 +200,8 @@ export default function DashboardPage() {
               </Button>
             </Card>
           ) : (
-            <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
-              <div className="md:col-span-2">
+            <form onSubmit={handleSubmit} className="grid gap-4 sm:gap-5 sm:grid-cols-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Nama Subdomain</label>
                 <div className="flex items-center gap-2">
                   <input

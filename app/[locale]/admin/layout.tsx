@@ -12,27 +12,19 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const user = await getSessionUser()
+
   if (!user) { redirect('/login') }
 
+  // Check if user is admin via both DB role and ADMIN_USER_ID
   if (!(await isAdminUser(user.id))) { redirect('/dashboard') }
-
-  const AdminLink = ({ href, label }: { href: string; label: string }) => (
-    <a href={href}
-      className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
-      {label}
-    </a>
-  )
 
   return (
     <div className="min-h-screen bg-bg dark:bg-bg-dark">
-      {/* Mobile top bar — sidebar hidden <md */}
+      {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 dark:border-border-dark dark:bg-surface-dark">
         <p className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">Admin</p>
         <div className="flex items-center gap-2">
           <NotificationBell />
-          <a href="/dashboard" className="rounded-md px-2 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-2 dark:hover:bg-surface-2-dark">
-            Dashboard
-          </a>
           <LogoutButton />
         </div>
       </header>
@@ -40,19 +32,25 @@ export default async function AdminLayout({
       <div className="flex gap-0">
         <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-surface dark:border-border-dark dark:bg-surface-dark p-4 gap-1">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Admin Panel</p>
-          <AdminLink href="/admin" label="Review" />
-          <AdminLink href="/admin/blog" label="Blog" />
-          <AdminLink href="/admin/users" label="Manajemen" />
-          <AdminLink href="/admin/abuse" label="Abuse Reports" />
-          <AdminLink href="/admin/activity" label="Activity" />
-          <AdminLink href="/admin/payments" label="Payments" />
-          <AdminLink href="/admin/settings" label="Settings" />
-          <div className="mt-3 px-3"><NotificationBell /></div>
+          <a href="/admin" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Dashboard
+          </a>
+          <a href="/admin/blog" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Blog
+          </a>
+          <a href="/admin/users" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Management
+          </a>
+          <a href="/admin/activity" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Activity
+          </a>
+          <a href="/admin/payments" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Payments
+          </a>
+          <a href="/admin/settings" className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
+            Settings
+          </a>
           <div className="mt-3 pt-4 border-t border-border dark:border-border-dark flex flex-col gap-1">
-            <a href="/dashboard" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition dark:hover:bg-surface-2-dark dark:hover:text-text-primary-dark">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-              Dashboard
-            </a>
             <LogoutButton />
           </div>
         </aside>
