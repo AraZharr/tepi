@@ -90,7 +90,13 @@ All existing routes/features:
 - Admin Abuse reports
 - Admin Activity logs
 - Admin Payments history
-- Admin Settings (site info, contact, social links)
+- Admin Settings (site info, contact, social links, hero image upload)
+- **CRM** (single customer view — integrated in redesign Phase 5)
+  - User profile: semua subdomain, payments, invoices, activity log, abuse reports, notifications
+  - Timeline: interactions (register, claim subdomain, renew, payment, abuse report, note)
+  - Tags/labels per user (internal CRM notes)
+  - Segments filter (active, pending payment, expiring, churned)
+  - Search: by email, username, subdomain name
 - Admin appearance/flow follows AZR admin pattern
 
 ### Out of Scope (this PRD)
@@ -184,6 +190,18 @@ Halaman admin TEPI harus mengikuti pattern yang sama dengan AZR:
 - Quick back navigation ke `/admin`
 - POST/PUT form dengan loading + success/error states
 
+### FR-15 CRM — Customer View
+Admin bisa klik user → single view yang menggabungkan semua data user:
+- **Profile:** email, username, full_name, role, subdomain_limit, join date, last activity
+- **Subdomains:** list semua subdomain (name, status, plan, expires_at)
+- **Payments:** semua invoice & histori pembayaran
+- **Activity Log:** timeline interaksi (register, claim, approve, reject, renew, abuse report, note)
+- **Notifications:** semua notifikasi user
+- **Tags/Labels:** internal CRM notes dari admin (disimpan di `site_settings` atau tabel baru `crm_user_tags`)
+- **Segments:** badge (active / expiring / churned / pending)
+- **Search:** filter user by email, username, subdomain name
+- Filter sidebar: All / Active / Expiring (within 7 days) / Churned (expired > 30 days) / Pending Payment
+
 ---
 
 ## 7. Non-Functional Requirements
@@ -222,7 +240,7 @@ Visual identity must feel:
 | **2** | OceanScene + hero image slot + reduced-motion support | Scene renders with/without image; no overflow |
 | **3** | Navbar, Footer, Layout shell, Hero | Shell consistent on mobile/desktop |
 | **4** | Primitives: Button, Card, Input, Modal, Dropdown, Toast, Skeleton, Empty | All states implemented; Lucide only |
-| **5** | Apply system to all existing routes (public + dashboard + admin) | All success metrics pass; zero feature regression |
+| **5** | Apply system to all existing routes (public + dashboard + admin), **CRM single-customer view** | All success metrics pass; zero feature regression |
 
 **Rule:** Never redesign pages independently. Pages only consume the system from Phases 1–4.
 
