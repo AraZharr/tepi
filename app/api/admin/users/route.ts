@@ -110,8 +110,24 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
 
-  const body = await req.json()
-  const { id, resource } = body
+  // Support both query params (legacy) and body
+  const url = new URL(req.url)
+  const queryId = url.searchParams.get('id')
+  
+  let id = queryId
+  let resource = 'user' // default resource when using query params
+  
+  // Try body if no query params
+  if (!queryId) {
+    try {
+      const body = await req.json()
+      id = body.id
+      resource = body.resource || 'user'
+    } catch {
+      // No body, stick with query params
+    }
+  }
+  
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const db = await getDB()
@@ -126,7 +142,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
-  // Default: delete user (legacy)
+  // Default: delete user
   const admin = await requireAdmin().catch(() => null)
   if (admin && admin.id === id) {
     return NextResponse.json({ error: 'Tidak bisa hapus akun sendiri' }, { status: 400 })
