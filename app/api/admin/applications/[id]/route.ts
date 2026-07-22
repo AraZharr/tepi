@@ -81,7 +81,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   })
 
   if (!dnsResult.success) {
-    return NextResponse.json({ error: `DNS creation failed: ${dnsResult.error}` }, { status: 500 })
+    console.error('[Admin Approve] DNS creation failed:', {
+      subdomain: app.subdomain_name,
+      type: targetType,
+      name: recordName,
+      content: targetValue,
+      error: dnsResult.error,
+      cf_zone_id: process.env.CF_ZONE_ID,
+      cf_token_exists: !!process.env.CF_API_TOKEN
+    })
+    return NextResponse.json({ 
+      error: `DNS creation failed: ${dnsResult.error}`,
+      _debug: { type: targetType, name: recordName, content: targetValue }
+    }, { status: 500 })
   }
 
   // Update application status → approved
