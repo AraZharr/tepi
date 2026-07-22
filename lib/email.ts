@@ -6,7 +6,7 @@
  */
 
 const RESEND_API = 'https://api.resend.com/emails'
-const FROM = 'tepi.my.id <onboarding@resend.dev>'
+const FROM = 'tepi.my.id <noreply@tepi.my.id>'
 
 interface SendEmailOptions {
   to: string
