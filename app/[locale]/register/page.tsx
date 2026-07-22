@@ -21,11 +21,41 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [timer, setTimer] = useState(0)
+  const [otpStatus, setOtpStatus] = useState<'idle' | 'valid' | 'invalid'>('idle')
   const [turnstileToken, setTurnstileToken] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [confirmSuccess, setConfirmSuccess] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((t) => t - 1), 1000)
+    }
+    return () => clearInterval(interval)
+  }, [timer])
+
+  async function handleResendOtp() {
+    setResendLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username, fullName }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setMessage('Kode OTP baru telah dikirim')
+      setTimer(60)
+    } catch (e: any) {
+      setError(e.message)
+    }
+    setResendLoading(false)
+  }
 
   const passwordMatch = password && confirmPassword && password === confirmPassword
 
@@ -92,6 +122,7 @@ export default function RegisterPage() {
       if (data.message) {
         setMessage(data.message)
         setStep('otp')
+        setTimer(60)
       } else if (data.token) {
         router.push('/dashboard')
         router.refresh()
@@ -105,6 +136,7 @@ export default function RegisterPage() {
   async function handleOtpVerify(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setOtpStatus('idle')
     setLoading(true)
     try {
       const res = await fetch('/api/auth/otp', {
@@ -114,14 +146,19 @@ export default function RegisterPage() {
       })
       const data: any = await res.json()
       if (!res.ok) {
-        setError(data.error)
+        setError(data.error || 'Kode OTP salah')
+        setOtpStatus('invalid')
         setLoading(false)
         return
       }
-      router.push('/dashboard')
-      router.refresh()
+      setOtpStatus('valid')
+      setTimeout(() => {
+        router.push('/dashboard')
+        router.refresh()
+      }, 400)
     } catch {
       setError('Gagal verifikasi OTP')
+      setOtpStatus('invalid')
     }
     setLoading(false)
   }
@@ -132,7 +169,9 @@ export default function RegisterPage() {
     setError(null)
     setConfirmError(null)
     setConfirmSuccess(false)
+    setOtpStatus('idle')
     setOtp('')
+    setTimer(0)
   }
 
   return (
@@ -144,15 +183,65 @@ export default function RegisterPage() {
         {step === 'otp' ? (
           <form onSubmit={handleOtpVerify} className="grid gap-4">
             <p className="text-sm text-text-secondary text-center">{message}</p>
+
             <div>
               <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Kode OTP</label>
-              <input required value={otp} onChange={e => setOtp(e.target.value.replace(/\\D/g, '').slice(0, 6))}
-                maxLength={6} inputMode="numeric" placeholder="123456"
-                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-center text-xl tracking-[.5em] focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark" />
+              <div className="relative">
+                <input
+                  required
+                  value={otp}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    setOtp(v)
+                    setOtpStatus('idle')
+                    setError(null)
+                  }}
+                  maxLength={6}
+                  inputMode="numeric"
+                  placeholder="123456"
+                  className={`w-full rounded-md border bg-bg px-3 py-2 pr-10 text-sm text-center text-xl tracking-[.5em] focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark ${
+                    otpStatus === 'valid'
+                      ? 'border-green-500 focus:border-green-500'
+                      : otpStatus === 'invalid'
+                        ? 'border-red-500 focus:border-red-500'
+                        : 'border-border focus:border-blue'
+                  }`}
+                />
+                {otpStatus === 'valid' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                )}
+                {otpStatus === 'invalid' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </span>
+                )}
+              </div>
             </div>
+
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-            <Button type="submit" disabled={loading}>{loading ? 'Memverifikasi...' : 'Verifikasi OTP'}</Button>
-            <button type="button" onClick={handleBack} className="text-sm text-blue hover:underline text-center">← Ganti email</button>
+
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Memverifikasi...' : 'Verifikasi OTP'}
+            </Button>
+
+            <div className="flex justify-between items-center">
+              <button type="button" onClick={handleBack} className="text-sm text-blue hover:underline">← Ganti email</button>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={timer > 0 || resendLoading}
+                className={`text-sm font-semibold ${timer > 0 ? 'text-text-muted cursor-not-allowed' : 'text-blue hover:underline'}`}
+              >
+                {timer > 0 ? `Kirim ulang OTP dalam 00:${String(timer).padStart(2,'0')}` : (resendLoading ? 'Mengirim...' : 'Kirim ulang OTP')}
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleSubmit} className="grid gap-4">
