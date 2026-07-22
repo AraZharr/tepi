@@ -77,23 +77,48 @@ export default function DashboardPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError(null)
-    setFormLoading(true)
 
-    const res = await csrfFetch('/api/user/subdomains', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, turnstile_token: turnstileToken }),
-    })
-    const result: any = await res.json()
-    setFormLoading(false)
-
-    if (!res.ok) {
-      setFormError(result.error)
+    // Validate DNS records client-side
+    const validRecords = form.dns_records.filter(r => r.type && r.value.trim())
+    if (validRecords.length === 0) {
+      setFormError('Minimal 1 DNS record harus diisi')
       return
     }
 
-    setSubmitted(true)
-    fetchData()
+    setFormLoading(true)
+
+    try {
+      const res = await csrfFetch('/api/user/subdomains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, dns_records: validRecords, turnstile_token: turnstileToken }),
+      })
+      
+      let result: any
+      const text = await res.text()
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch {
+        console.error('[Submit] Invalid JSON response:', text)
+        setFormError('Server error: Invalid response format')
+        setFormLoading(false)
+        return
+      }
+
+      setFormLoading(false)
+
+      if (!res.ok) {
+        setFormError(result.error || 'Gagal submit aplikasi')
+        return
+      }
+
+      setSubmitted(true)
+      fetchData()
+    } catch (err: any) {
+      console.error('[Submit] Network error:', err)
+      setFormError('Network error: ' + err.message)
+      setFormLoading(false)
+    }
   }
 
   async function handleLogout() {
