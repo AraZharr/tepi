@@ -11,6 +11,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const { id } = await params
   const { status, reject_reason } = await req.json()
 
   if (!['approved', 'rejected'].includes(status)) {

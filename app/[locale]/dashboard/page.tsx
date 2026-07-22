@@ -28,7 +28,11 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
   pending: { label: 'Menunggu Review', class: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300' },
   approved: { label: 'Disetujui', class: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
   rejected: { label: 'Ditolak', class: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' },
+  active: { label: 'Aktif', class: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
 }
+
+const inputCls =
+  'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -36,7 +40,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<{ applications: any[]; subdomains: any[] }>({ applications: [], subdomains: [] })
 
-  // Form state
   const [form, setForm] = useState({
     subdomain_name: '',
     target_platform: '',
@@ -98,32 +101,55 @@ export default function DashboardPage() {
     router.refresh()
   }
 
-  if (loading) return <main className="flex min-h-screen items-center justify-center bg-bg dark:bg-bg-dark"><p className="text-text-muted">Memuat...</p></main>
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg dark:bg-bg-dark">
+        <p className="text-text-muted">Memuat...</p>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
-      {/* Nav */}
-      <nav className="flex items-center justify-between border-b border-border bg-surface px-4 sm:px-6 lg:px-8 py-3 dark:border-border-dark dark:bg-surface-dark">
-        <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">tepi.my.id</h1>
-        <div className="flex items-center gap-3">
-          <a href="/pricing" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Harga</a>
-          <a href="/dashboard/invoices" className="text-sm text-text-secondary hover:text-text-primary dark:text-text-secondary-dark">Invoice</a>
-          <NotificationBell />
-          <span className="text-sm text-text-secondary dark:text-text-secondary-dark">{user?.email}</span>
-          <Button variant="secondary" onClick={handleLogout} className="px-3 py-1 text-sm">Keluar</Button>
+      {/* Nav — stack on mobile so nothing clips */}
+      <nav className="border-b border-border bg-surface dark:border-border-dark dark:bg-surface-dark">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <h1 className="font-heading shrink-0 text-base font-bold text-text-primary dark:text-text-primary-dark sm:text-lg">
+            tepi.my.id
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <a href="/pricing" className="text-xs text-text-secondary hover:text-text-primary sm:text-sm dark:text-text-secondary-dark">
+              Harga
+            </a>
+            <a href="/dashboard/invoices" className="text-xs text-text-secondary hover:text-text-primary sm:text-sm dark:text-text-secondary-dark">
+              Invoice
+            </a>
+            {user?.role === 'admin' || user?.id === process.env.NEXT_PUBLIC_ADMIN_HINT ? (
+              <a href="/admin" className="text-xs font-semibold text-blue sm:text-sm">Admin</a>
+            ) : null}
+            <NotificationBell />
+            <span className="hidden max-w-[140px] truncate text-xs text-text-secondary sm:inline sm:text-sm dark:text-text-secondary-dark">
+              {user?.email}
+            </span>
+            <Button variant="secondary" onClick={handleLogout} className="!px-2.5 !py-1 text-xs sm:!px-3 sm:text-sm">
+              Keluar
+            </Button>
+          </div>
         </div>
       </nav>
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Subdomain list */}
-        <section className="mb-10">
-          <h2 className="font-heading text-xl font-bold text-text-primary dark:text-text-primary-dark mb-4">Subdomain Kamu</h2>
+        <section className="mb-8 sm:mb-10">
+          <h2 className="font-heading mb-4 text-lg font-bold text-text-primary dark:text-text-primary-dark sm:text-xl">
+            Subdomain Kamu
+          </h2>
           {data.subdomains.length === 0 ? (
-            <Card hover={false} className="text-center py-8 text-text-secondary dark:text-text-secondary-dark">
+            <Card hover={false} className="py-8 text-center text-text-secondary dark:text-text-secondary-dark">
               Belum punya subdomain aktif. Ajukan satu!
             </Card>
           ) : (
-            <div className="gap-3">
+            <div className="grid gap-3">
               {data.subdomains.map((s) => {
                 let remaining = ''
                 if (s.expires_at) {
@@ -133,43 +159,46 @@ export default function DashboardPage() {
                   remaining = days === 0 ? 'Hari ini' : `${days} hari lagi`
                 }
                 return (
-                <Card key={s.id} hover={false} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-text-primary dark:text-text-primary-dark">
-                      {s.name}.tepi.my.id
-                    </p>
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                      → {s.target_value} ({s.target_type}) · {s.plan}
-                    </p>
-                    {remaining && <p className="text-xs text-text-muted mt-0.5">Berlaku: {remaining}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
-                      {STATUS_MAP[s.status]?.label || s.status}
-                    </span>
-                    {s.status === 'active' && (
-                      <Button variant="secondary" className="px-3 py-1 text-xs">Perpanjang</Button>
-                    )}
-                  </div>
-                </Card>
-              )})}
+                  <Card key={s.id} hover={false} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="break-all font-semibold text-text-primary dark:text-text-primary-dark">
+                        {s.name}.tepi.my.id
+                      </p>
+                      <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
+                        → {s.target_value} ({s.target_type}) · {s.plan}
+                      </p>
+                      {remaining && <p className="mt-0.5 text-xs text-text-muted">Berlaku: {remaining}</p>}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
+                        {STATUS_MAP[s.status]?.label || s.status}
+                      </span>
+                      {s.status === 'active' && (
+                        <Button variant="secondary" className="!px-3 !py-1 text-xs">Perpanjang</Button>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </section>
 
         {/* Applications list */}
-        <section className="mb-10">
-          <h2 className="font-heading text-xl font-bold text-text-primary dark:text-text-primary-dark mb-4">Riwayat Pengajuan</h2>
+        <section className="mb-8 sm:mb-10">
+          <h2 className="font-heading mb-4 text-lg font-bold text-text-primary dark:text-text-primary-dark sm:text-xl">
+            Riwayat Pengajuan
+          </h2>
           {data.applications.length === 0 ? (
-            <Card hover={false} className="text-center py-8 text-text-secondary dark:text-text-secondary-dark">
+            <Card hover={false} className="py-8 text-center text-text-secondary dark:text-text-secondary-dark">
               Belum ada pengajuan.
             </Card>
           ) : (
             <div className="grid gap-3">
               {data.applications.map((a) => (
-                <Card key={a.id} hover={false} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-text-primary dark:text-text-primary-dark">
+                <Card key={a.id} hover={false} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="break-all font-semibold text-text-primary dark:text-text-primary-dark">
                       {a.subdomain_name}.tepi.my.id
                     </p>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
@@ -179,7 +208,7 @@ export default function DashboardPage() {
                       <p className="mt-1 text-sm text-red">Alasan: {a.reject_reason}</p>
                     )}
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[a.status]?.class) || ''}`}>
+                  <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[a.status]?.class) || ''}`}>
                     {STATUS_MAP[a.status]?.label || a.status}
                   </span>
                 </Card>
@@ -190,20 +219,34 @@ export default function DashboardPage() {
 
         {/* Claim form */}
         <section>
-          <h2 className="font-heading text-xl font-bold text-text-primary dark:text-text-primary-dark mb-4">Ajukan Subdomain Baru</h2>
+          <h2 className="font-heading mb-4 text-lg font-bold text-text-primary dark:text-text-primary-dark sm:text-xl">
+            Ajukan Subdomain Baru
+          </h2>
           {submitted ? (
-            <Card hover={false} className="text-center py-8">
+            <Card hover={false} className="py-8 text-center">
               <p className="text-lg font-semibold text-text-primary dark:text-text-primary-dark">✅ Pengajuan terkirim!</p>
               <p className="mt-2 text-text-secondary dark:text-text-secondary-dark">Tim kami akan mereview dalam 1×24 jam.</p>
-              <Button className="mt-4" onClick={() => { setSubmitted(false); setForm({ subdomain_name: '', target_platform: '', target_url: '', project_type: '', project_description: '', is_public: true, has_monetization: false, github_link: '', linkedin_link: '', social_link: '' }) }}>
+              <Button
+                className="mt-4"
+                onClick={() => {
+                  setSubmitted(false)
+                  setForm({
+                    subdomain_name: '', target_platform: '', target_url: '', project_type: '',
+                    project_description: '', is_public: true, has_monetization: false,
+                    github_link: '', linkedin_link: '', social_link: '',
+                  })
+                }}
+              >
                 Ajukan Lagi
               </Button>
             </Card>
           ) : (
-            <form onSubmit={handleSubmit} className="grid gap-4 sm:gap-5 sm:grid-cols-2">
+            <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 sm:gap-5">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Nama Subdomain</label>
-                <div className="flex items-center gap-2">
+                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
+                  Nama Subdomain
+                </label>
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                   <input
                     type="text"
                     required
@@ -212,9 +255,9 @@ export default function DashboardPage() {
                     pattern="^[a-z0-9-]+$"
                     value={form.subdomain_name}
                     onChange={(e) => setForm({ ...form, subdomain_name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                    className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                    className={inputCls}
                   />
-                  <span className="whitespace-nowrap text-sm text-text-muted">.tepi.my.id</span>
+                  <span className="shrink-0 text-sm text-text-muted">.tepi.my.id</span>
                 </div>
               </div>
 
@@ -224,7 +267,7 @@ export default function DashboardPage() {
                   required
                   value={form.target_platform}
                   onChange={(e) => setForm({ ...form, target_platform: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 >
                   <option value="">Pilih platform...</option>
                   {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -239,26 +282,26 @@ export default function DashboardPage() {
                   placeholder="https://username.github.io"
                   value={form.target_url}
                   onChange={(e) => setForm({ ...form, target_url: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Tipe Project</label>
                 <select
                   required
                   value={form.project_type}
                   onChange={(e) => setForm({ ...form, project_type: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 >
                   <option value="">Pilih tipe...</option>
                   {PROJECT_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
 
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
-                  Deskripsi Project <span className="text-text-muted font-normal">(min. 100 karakter)</span>
+                  Deskripsi Project <span className="font-normal text-text-muted">(min. 100 karakter)</span>
                 </label>
                 <textarea
                   required
@@ -267,12 +310,12 @@ export default function DashboardPage() {
                   value={form.project_description}
                   onChange={(e) => setForm({ ...form, project_description: e.target.value })}
                   placeholder="Jelaskan project kamu secara detail..."
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 />
                 <p className="mt-1 text-xs text-text-muted">{form.project_description.length}/100 karakter</p>
               </div>
 
-              <div className="md:col-span-2 flex flex-wrap gap-6">
+              <div className="flex flex-wrap gap-4 sm:col-span-2 sm:gap-6">
                 <label className="flex items-center gap-2 text-sm text-text-primary dark:text-text-primary-dark">
                   <input type="checkbox" checked={form.is_public} onChange={() => setForm({ ...form, is_public: !form.is_public })} className="rounded" />
                   Project publik
@@ -290,7 +333,7 @@ export default function DashboardPage() {
                   placeholder="https://github.com/username/repo"
                   value={form.github_link}
                   onChange={(e) => setForm({ ...form, github_link: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 />
               </div>
 
@@ -301,25 +344,25 @@ export default function DashboardPage() {
                   placeholder="https://linkedin.com/in/username"
                   value={form.linkedin_link}
                   onChange={(e) => setForm({ ...form, linkedin_link: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Social Lain (opsional)</label>
                 <input
                   type="url"
                   placeholder="https://instagram.com/username"
                   value={form.social_link}
                   onChange={(e) => setForm({ ...form, social_link: e.target.value })}
-                  className="w-full rounded-md border border-border bg-bg px-3 py-2 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+                  className={inputCls}
                 />
               </div>
 
-              {formError && <p className="md:col-span-2 text-sm text-red">{formError}</p>}
+              {formError && <p className="text-sm text-red sm:col-span-2">{formError}</p>}
 
-              <div className="md:col-span-2">
-                <Button type="submit" disabled={formLoading}>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={formLoading} className="w-full sm:w-auto">
                   {formLoading ? 'Mengirim...' : 'Ajukan Subdomain'}
                 </Button>
               </div>

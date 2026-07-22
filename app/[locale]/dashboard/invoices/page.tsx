@@ -34,7 +34,7 @@ export default function InvoicesPage() {
 
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
-      <nav className="flex items-center justify-between border-b border-border bg-surface px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
+      <nav className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 dark:border-border-dark dark:bg-surface-dark sm:px-6">
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">📄 Invoice</h1>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => router.push('/dashboard')}>← Dashboard</Button>

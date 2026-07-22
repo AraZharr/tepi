@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { setRequestLocale } from 'next-intl/server'
+import SiteNav from '@/components/SiteNav'
 
 export const metadata = {
   title: 'Harga | tepi.my.id',
@@ -55,12 +56,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
 
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
-      <nav className="border-b border-border bg-surface px-6 py-4 dark:border-border-dark dark:bg-surface-dark">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <Link href="/" className="font-heading text-xl font-extrabold text-text-primary dark:text-text-primary-dark">tepi.my.id</Link>
-          <Link href="/" className="text-sm text-text-secondary hover:text-text-primary">← Beranda</Link>
-        </div>
-      </nav>
+      <SiteNav />
 
       <div className="mx-auto max-w-4xl px-4 py-12 text-center">
         <h1 className="font-heading text-3xl font-extrabold text-text-primary dark:text-text-primary-dark mb-2">Pilih Paket</h1>

@@ -33,10 +33,10 @@ export default function ContactPage() {
 
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
-      <nav className="border-b border-border bg-surface px-6 py-4 dark:border-border-dark dark:bg-surface-dark">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <Link href="/" className="font-heading text-xl font-extrabold text-text-primary dark:text-text-primary-dark">tepi.my.id</Link>
-          <Link href="/" className="text-sm text-text-secondary hover:text-text-primary">← Beranda</Link>
+      <nav className="border-b border-border bg-surface px-4 py-3 dark:border-border-dark dark:bg-surface-dark sm:px-6 sm:py-4">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2">
+          <Link href="/" className="font-heading shrink-0 text-base font-extrabold text-text-primary dark:text-text-primary-dark sm:text-xl">tepi.my.id</Link>
+          <Link href="/" className="text-xs text-text-secondary hover:text-text-primary sm:text-sm">← Beranda</Link>
         </div>
       </nav>
 

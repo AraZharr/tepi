@@ -68,7 +68,7 @@ export default function AdminBlogPage() {
 
   return (
     <main className="min-h-screen bg-bg dark:bg-bg-dark">
-      <nav className="flex items-center justify-between border-b border-border bg-surface px-6 py-3 dark:border-border-dark dark:bg-surface-dark">
+      <nav className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 dark:border-border-dark dark:bg-surface-dark sm:px-6">
         <h1 className="font-heading text-lg font-bold text-text-primary dark:text-text-primary-dark">Admin — Blog</h1>
         <Button onClick={() => router.push('/admin')}>← Kembali</Button>
       </nav>
