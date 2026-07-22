@@ -5,12 +5,13 @@ export const CSRF_HEADER = 'x-csrf-token'
 
 /** Public mutating routes — no session cookie abuse risk / own auth. */
 const CSRF_EXEMPT = [
-  '/api/auth',           // login/register (Turnstile)
-  '/api/auth/otp',       // OTP (pre-session)
-  '/api/webhook/',       // Paywuz signature
-  '/api/contact',        // public form
-  '/api/abuse',          // public form
-  '/api/chat',           // public widget
+  '/api/auth',
+  '/api/auth/otp',
+  '/api/webhook/',
+  '/api/contact',
+  '/api/abuse',
+  '/api/chat',
+  '/api/diag',
 ]
 
 export function generateCsrfToken(): string {
