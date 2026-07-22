@@ -303,18 +303,18 @@ export default function DashboardPage() {
 
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
-                  Deskripsi Project <span className="font-normal text-text-muted">(min. 100 karakter)</span>
+                  Deskripsi Project <span className="font-normal text-text-muted">(min. 20 karakter)</span>
                 </label>
                 <textarea
                   required
                   rows={3}
-                  minLength={100}
+                  minLength={20}
                   value={form.project_description}
                   onChange={(e) => setForm({ ...form, project_description: e.target.value })}
                   placeholder="Jelaskan project kamu secara detail..."
                   className={inputCls}
                 />
-                <p className="mt-1 text-xs text-text-muted">{form.project_description.length}/100 karakter</p>
+                <p className="mt-1 text-xs text-text-muted">{form.project_description.length}/20 karakter</p>
               </div>
 
               <div className="flex flex-wrap gap-4 sm:col-span-2 sm:gap-6">
