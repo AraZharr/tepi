@@ -15,9 +15,9 @@ function getHeaders() {
 }
 
 export interface DNSRecordInput {
-  type: 'A' | 'CNAME'
+  type: 'A' | 'CNAME' | 'TXT'
   name: string    // nama subdomain lengkap, misal: "budi.tepi.my.id"
-  content: string // IP address (untuk A) atau domain tujuan (untuk CNAME)
+  content: string // IP address (untuk A), domain tujuan (untuk CNAME), atau value (untuk TXT)
   proxied?: boolean
   ttl?: number
 }
@@ -43,7 +43,7 @@ export async function createDNSRecord(
         type: record.type,
         name: record.name,
         content: record.content,
-        proxied: record.proxied ?? true,  // default proxied = SSL otomatis
+        proxied: record.type === 'TXT' ? false : (record.proxied ?? true),  // TXT gak bisa diproxy
         ttl: record.ttl ?? 1,            // 1 = automatic TTL
       }),
     }

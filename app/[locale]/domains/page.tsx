@@ -160,7 +160,7 @@ export default function DomainsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                    Platform: {PLATFORMS[a.target_platform] || a.target_platform} · Target: {a.target_url}
+                    Record: {a.record_type} → {a.record_value}
                   </p>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
                     {a.project_description}
@@ -193,7 +193,7 @@ export default function DomainsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                    Platform: {PLATFORMS[a.target_platform] || a.target_platform} · Target: {a.target_url}
+                    Record: {a.record_type} → {a.record_value}
                   </p>
                   {a.reject_reason && (
                     <p className="mt-1 rounded bg-red-50 p-2 text-sm text-red dark:bg-red-900/20">

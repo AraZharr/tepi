@@ -120,8 +120,7 @@ export default function AdminPage() {
                   </div>
                   <div className="mt-2 grid gap-x-6 gap-y-1 text-sm md:grid-cols-2">
                     <p className="text-text-secondary">Pemohon: <span className="text-text-primary">{app.full_name || app.email}</span></p>
-                    <p className="text-text-secondary">Platform: <span className="text-text-primary">{PLATFORMS[app.target_platform] || app.target_platform}</span></p>
-                    <p className="text-text-secondary">Target: <a href={app.target_url} target="_blank" className="text-blue hover:underline">{app.target_url}</a></p>
+                    <p className="text-text-secondary">Record: <span className="text-text-primary">{app.record_type} → {app.record_value}</span></p>
                   </div>
                   <p className="mt-3 text-sm text-text-secondary border-t border-border pt-3">{app.project_description}</p>
                 </div>

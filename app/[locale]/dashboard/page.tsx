@@ -43,8 +43,8 @@ export default function DashboardPage() {
 
   const [form, setForm] = useState({
     subdomain_name: '',
-    target_platform: '',
-    target_url: '',
+    record_type: '',
+    record_value: '',
     project_type: '',
     project_description: '',
     is_public: true,
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                       {a.subdomain_name}.tepi.my.id
                     </p>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                      {PLATFORMS.find(p => p.value === a.target_platform)?.label || a.target_platform}
+                      {a.record_type} → {a.record_value}
                     </p>
                     {a.status === 'rejected' && a.reject_reason && (
                       <p className="mt-1 text-sm text-red">Alasan: {a.reject_reason}</p>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                 onClick={() => {
                   setSubmitted(false)
                   setForm({
-                    subdomain_name: '', target_platform: '', target_url: '', project_type: '',
+                    subdomain_name: '', record_type: '', record_value: '', project_type: '',
                     project_description: '', is_public: true, has_monetization: false,
                     github_link: '', linkedin_link: '', social_link: '',
                   })
@@ -267,26 +267,38 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Platform Target</label>
+                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Tipe Record</label>
                 <select
                   required
-                  value={form.target_platform}
-                  onChange={(e) => setForm({ ...form, target_platform: e.target.value })}
+                  value={form.record_type}
+                  onChange={(e) => setForm({ ...form, record_type: e.target.value })}
                   className={inputCls}
                 >
-                  <option value="">Pilih platform...</option>
-                  {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  <option value="">Pilih tipe...</option>
+                  <option value="CNAME">CNAME — untuk domain (Vercel, GH Pages, dll)</option>
+                  <option value="A">A Record — untuk IP address (VPS, server langsung)</option>
+                  <option value="TXT">TXT — untuk verifikasi kepemilikan</option>
                 </select>
+                <p className="mt-1 text-xs text-text-muted">
+                  {form.record_type === 'CNAME' && 'Contoh: username.github.io, cname.vercel-dns.com'}
+                  {form.record_type === 'A' && 'Contoh: 185.199.108.153 (IP GitHub Pages)'}
+                  {form.record_type === 'TXT' && 'Untuk verifikasi domain di platform tertentu'}
+                </p>
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">URL Target</label>
+                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Nilai Record</label>
                 <input
-                  type="url"
+                  type="text"
                   required
-                  placeholder="https://username.github.io"
-                  value={form.target_url}
-                  onChange={(e) => setForm({ ...form, target_url: e.target.value })}
+                  placeholder={
+                    form.record_type === 'CNAME' ? 'username.github.io' :
+                    form.record_type === 'A' ? '185.199.108.153' :
+                    form.record_type === 'TXT' ? 'verification-string-xxx' :
+                    'Masukkan nilai record...'
+                  }
+                  value={form.record_value}
+                  onChange={(e) => setForm({ ...form, record_value: e.target.value })}
                   className={inputCls}
                 />
               </div>

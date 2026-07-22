@@ -61,20 +61,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // Approve — create DNS record + subdomain
   const recordName = `${app.subdomain_name as string}.tepi.my.id`
-  let targetType: 'CNAME' | 'A' = 'CNAME'
-  let targetValue = ''
-
-  try {
-    const url = new URL(app.target_url as string)
-    targetValue = url.hostname
-    const ipMatch = targetValue.match(/^(\d{1,3}\.){3}\d{1,3}$/)
-    if (ipMatch) targetType = 'A'
-  } catch {
-    targetValue = app.target_url as string
-  }
+  const targetType = (app.record_type as string) || 'CNAME'
+  const targetValue = (app.record_value as string)
 
   const dnsResult = await createDNSRecord({
-    type: targetType,
+    type: targetType as 'CNAME' | 'A' | 'TXT',
     name: recordName,
     content: targetValue,
     proxied: true,

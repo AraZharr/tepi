@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
-import { validateSubdomainName, validateTargetURL } from '@/lib/validators'
+import { validateSubdomainName, validateDNSValue } from '@/lib/validators'
 import { isReserved } from '@/lib/reserved'
 import { autoScanSubdomain } from '@/lib/auto-scan'
 import { verifyTurnstile } from '@/lib/turnstile'
@@ -15,7 +15,7 @@ export async function GET() {
 
   const [applications, subdomains] = await Promise.all([
     db.prepare(
-      `SELECT id, subdomain_name, target_platform, target_url, status, reject_reason, created_at
+      `SELECT id, subdomain_name, record_type, record_value, status, reject_reason, created_at
        FROM subdomain_applications WHERE user_id = ? ORDER BY created_at DESC`
     ).bind(user.id).all(),
     db.prepare(
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body: any = await req.json()
-  const { subdomain_name, target_platform, target_url, project_type, project_description,
+  const { subdomain_name, record_type, record_value, project_type, project_description,
     is_public, has_monetization, github_link, linkedin_link, social_link, turnstile_token } = body
 
   // Validate Turnstile
@@ -60,9 +60,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Nama ini tidak tersedia.' }, { status: 400 })
   }
 
-  // Validate URL
-  const urlCheck = validateTargetURL(target_url)
-  if (!urlCheck.valid) return NextResponse.json({ error: urlCheck.error }, { status: 400 })
+  // Validate record type & value
+  if (!['CNAME', 'A', 'TXT'].includes(record_type)) {
+    return NextResponse.json({ error: 'Tipe record tidak valid. Pilih CNAME, A, atau TXT.' }, { status: 400 })
+  }
+  const valueCheck = validateDNSValue(record_type, record_value)
+  if (!valueCheck.valid) return NextResponse.json({ error: valueCheck.error }, { status: 400 })
 
   if (!project_type || !project_description) {
     return NextResponse.json({ error: 'Project type and description required' }, { status: 400 })
@@ -98,19 +101,19 @@ export async function POST(req: Request) {
   }
 
   // Auto-scan untuk quarantine
-  const scan = await autoScanSubdomain(subdomain_name, target_url)
+  const scan = await autoScanSubdomain(subdomain_name, record_value)
   const quarantineStatus = scan.passed ? 'quarantine' : 'quarantine'
   // Semua new claim masuk quarantine dulu sampai lolos review atau auto-cleared
 
   await db.prepare(
-    `INSERT INTO subdomain_applications (user_id, subdomain_name, target_platform, target_url, project_type,
+    `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
       project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
   ).bind(
     user.id,
     subdomain_name.toLowerCase().trim(),
-    target_platform,
-    target_url,
+    record_type.toUpperCase(),
+    record_value.trim(),
     project_type,
     project_description,
     is_public ? 1 : 0,

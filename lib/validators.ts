@@ -78,21 +78,43 @@ export function validateSubdomainName(name: string): ValidationResult {
   return { valid: true }
 }
 
-/** Validasi URL target (CNAME atau A record) */
-export function validateTargetURL(url: string): ValidationResult {
-  if (!url || url.trim() === '') {
-    return { valid: false, error: 'URL target wajib diisi.' }
+/** Validasi nilai DNS record */
+export function validateDNSValue(type: string, value: string): ValidationResult {
+  if (!value || value.trim() === '') {
+    return { valid: false, error: 'Nilai record wajib diisi.' }
   }
 
-  try {
-    const parsed = new URL(url)
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return { valid: false, error: 'URL harus diawali https:// atau http://' }
+  const trimmed = value.trim()
+
+  if (type === 'A') {
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/
+    if (!ipv4Regex.test(trimmed)) {
+      return { valid: false, error: 'A record harus berupa IP address (contoh: 185.199.108.153).' }
     }
-    return { valid: true }
-  } catch {
-    return { valid: false, error: 'Format URL tidak valid.' }
+    const parts = trimmed.split('.').map(Number)
+    if (parts.some((part) => part > 255)) {
+      return { valid: false, error: 'Nilai oktet IP tidak valid (maks 255).' }
+    }
+  } else if (type === 'CNAME') {
+    // Harus hostname valid (gak boleh protokol)
+    if (/^https?:\/\//.test(trimmed)) {
+      return { valid: false, error: 'CNAME record tidak boleh diawali https://. Masukkan domain tujuan saja (contoh: username.github.io).' }
+    }
+    if (!/^[a-zA-Z0-9.-]+$/.test(trimmed)) {
+      return { valid: false, error: 'Format CNAME record tidak valid.' }
+    }
+    if (!trimmed.includes('.')) {
+      return { valid: false, error: 'CNAME record harus berupa domain valid (contoh: cname.vercel-dns.com).' }
+    }
+  } else if (type === 'TXT') {
+    if (trimmed.length > 255) {
+      return { valid: false, error: 'TXT record maksimal 255 karakter.' }
+    }
+  } else {
+    return { valid: false, error: 'Tipe record tidak valid. Pilih CNAME, A, atau TXT.' }
   }
+
+  return { valid: true }
 }
 
 /** Validasi IP address untuk A record */
