@@ -24,17 +24,20 @@ export default function DebugPanel() {
     }
   }, [])
 
-  if (!isOpen && logs.length === 0) return null
-
   return (
     <div className="fixed bottom-20 right-4 z-50">
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-red text-white shadow-lg hover:bg-red/90"
+          className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red text-white shadow-lg hover:bg-red/90"
           title="Debug Logs"
         >
           🐛
+          {logs.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-500 text-xs font-bold text-black">
+              {logs.length}
+            </span>
+          )}
         </button>
       ) : (
         <div className="w-80 max-h-96 overflow-auto rounded-lg border border-red bg-black/95 p-3 shadow-xl text-xs font-mono">
