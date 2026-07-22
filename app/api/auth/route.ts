@@ -51,8 +51,14 @@ export async function POST(request: Request) {
     steps.push('user:' + (user ? 'found' : 'new'))
 
     if (user) {
+      // Existing user — login path
       if (user.is_suspended) return NextResponse.json({ error: 'Akun sedang di-suspend' }, { status: 403 })
-      if (!user.email_verified) return NextResponse.json({ error: 'Email belum diverifikasi' }, { status: 403 })
+      if (!user.email_verified) {
+        // Unverified user: resend OTP instead of creating new record
+        steps.push('unverified-resend-otp')
+        await issueOtp(email, 'register')
+        return NextResponse.json({ message: 'Kode OTP baru telah dikirim ke email kamu. Verifikasi akun kamu untuk melanjutkan.' }, { status: 200 })
+      }
       steps.push('verifyPassword')
       if (!(await verifyPassword(password, user.password_hash))) return NextResponse.json({ error: 'Password salah' }, { status: 401 })
     } else {

@@ -1,11 +1,10 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
 import NotificationBell from '@/components/NotificationBell'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 const PLATFORMS = [
   { value: 'github_pages', label: 'GitHub Pages' },
@@ -54,6 +53,7 @@ export default function DashboardPage() {
   })
   const [formError, setFormError] = useState<string | null>(null)
   const [formLoading, setFormLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function DashboardPage() {
     const res = await csrfFetch('/api/user/subdomains', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, turnstile_token: turnstileToken }),
     })
     const result: any = await res.json()
     setFormLoading(false)
@@ -359,6 +359,7 @@ export default function DashboardPage() {
                 />
               </div>
 
+              <TurnstileWidget onVerify={setTurnstileToken} />
               {formError && <p className="text-sm text-red sm:col-span-2">{formError}</p>}
 
               <div className="sm:col-span-2">
