@@ -29,16 +29,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
-          NEXT_PUBLIC_ROOT_DOMAIN: ${{ secrets.NEXT_PUBLIC_ROOT_DOMAIN }}
-          NEXT_PUBLIC_WA_NUMBER: ${{ secrets.NEXT_PUBLIC_WA_NUMBER || '' }}
-          NEXT_PUBLIC_EMAIL_ADDR: ${{ secrets.NEXT_PUBLIC_EMAIL_ADDR || '' }}
-
-      - name: Write env vars to worker
+      - name: Set runtime secrets
         run: |
           for pair in \
             "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" \
@@ -50,8 +41,8 @@ jobs:
             "CF_ZONE_ID=${{ secrets.CF_ZONE_ID }}" \
             "CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}" \
             "CRON_SECRET=${{ secrets.CRON_SECRET }}" \
-            "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY || '' }}" \
-            "GROQ_API_KEY=${{ secrets.GROQ_API_KEY || '' }}"; do
+            "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" \
+            "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}"; do
             key="${pair%%=*}"
             val="${pair#*=}"
             if [ -n "$val" ]; then
@@ -62,16 +53,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      - name: Deploy worker
-        run: npx wrangler deploy
+      - name: Build & Deploy (OpenNext)
+        run: npm run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-
-      - name: Map custom domain
-        run: |
-          npx wrangler deploy --name tepi || true
-          echo "✅ Worker deployed"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_ROOT_DOMAIN: ${{ secrets.NEXT_PUBLIC_ROOT_DOMAIN }}
