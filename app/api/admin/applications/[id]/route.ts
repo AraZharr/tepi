@@ -59,33 +59,41 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ success: true, action: 'rejected' })
   }
 
-  // Approve — create DNS record + subdomain
+  // Approve — create DNS records + subdomain
   const recordName = `${app.subdomain_name as string}.tepi.my.id`
-  const targetType = (app.record_type as string) || 'CNAME'
-  const targetValue = (app.record_value as string)
+  const dnsRecords = app.dns_records ? JSON.parse(app.dns_records as string) : 
+    [{ type: app.record_type || 'CNAME', value: app.record_value || '' }] // Backward compat
 
-  const dnsResult = await createDNSRecord({
-    type: targetType as 'CNAME' | 'A' | 'TXT',
-    name: recordName,
-    content: targetValue,
-    proxied: true,
-  })
+  const createdRecords: any[] = []
 
-  if (!dnsResult.success) {
-    console.error('[Admin Approve] DNS creation failed:', {
-      subdomain: app.subdomain_name,
-      type: targetType,
+  // Create all DNS records
+  for (const rec of dnsRecords) {
+    const dnsResult = await createDNSRecord({
+      type: rec.type as 'CNAME' | 'A' | 'TXT',
       name: recordName,
-      content: targetValue,
-      error: dnsResult.error,
-      cf_zone_id: process.env.CF_ZONE_ID,
-      cf_token_exists: !!process.env.CF_API_TOKEN
+      content: rec.value,
+      proxied: true,
     })
-    return NextResponse.json({ 
-      error: `DNS creation failed: ${dnsResult.error}`,
-      _debug: { type: targetType, name: recordName, content: targetValue }
-    }, { status: 500 })
+
+    if (!dnsResult.success) {
+      console.error('[Admin Approve] DNS creation failed:', {
+        subdomain: app.subdomain_name,
+        type: rec.type,
+        name: recordName,
+        content: rec.value,
+        error: dnsResult.error,
+      })
+      return NextResponse.json({ 
+        error: `DNS creation failed: ${dnsResult.error}`,
+        _debug: { type: rec.type, name: recordName, content: rec.value }
+      }, { status: 500 })
+    }
+
+    createdRecords.push({ type: rec.type, value: rec.value, cf_record_id: dnsResult.result?.id })
   }
+
+  // Use first record as primary target for subdomain table
+  const primaryRecord = createdRecords[0]
 
   // Update application status → approved
   await db.prepare(
@@ -102,9 +110,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   ).bind(
     app.user_id,
     app.subdomain_name,
-    targetType,
-    targetValue,
-    dnsResult.result?.id ?? null,
+    primaryRecord.type,
+    primaryRecord.value,
+    primaryRecord.cf_record_id ?? null,
     isAdminClaim ? null : expiresAt // Admin = never expires
   ).run()
 

@@ -43,8 +43,7 @@ export default function DashboardPage() {
 
   const [form, setForm] = useState({
     subdomain_name: '',
-    record_type: '',
-    record_value: '',
+    dns_records: [{ type: '', value: '' }], // Array of DNS records
     project_type: '',
     project_description: '',
     is_public: true,
@@ -207,7 +206,7 @@ export default function DashboardPage() {
                       {a.subdomain_name}.tepi.my.id
                     </p>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                      {a.record_type} → {a.record_value}
+                      {a.dns_records ? JSON.parse(a.dns_records).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
                     </p>
                     {a.status === 'rejected' && a.reject_reason && (
                       <p className="mt-1 text-sm text-red">Alasan: {a.reject_reason}</p>
@@ -236,7 +235,7 @@ export default function DashboardPage() {
                 onClick={() => {
                   setSubmitted(false)
                   setForm({
-                    subdomain_name: '', record_type: '', record_value: '', project_type: '',
+                    subdomain_name: '', dns_records: [{ type: '', value: '' }], project_type: '',
                     project_description: '', is_public: true, has_monetization: false,
                     github_link: '', linkedin_link: '', social_link: '',
                   })
@@ -266,35 +265,76 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Tipe Record</label>
-                <select
-                  required
-                  value={form.record_type}
-                  onChange={(e) => setForm({ ...form, record_type: e.target.value })}
-                  className={inputCls}
-                >
-                  <option value="">Pilih tipe...</option>
-                  <option value="CNAME">CNAME</option>
-                  <option value="A">A Record</option>
-                  <option value="TXT">TXT</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">Nilai Record</label>
-                <input
-                  type="text"
-                  required
-                  placeholder={
-                    form.record_type === 'CNAME' ? 'contoh.vercel.app' :
-                    form.record_type === 'A' ? '185.199.108.153' :
-                    'Value...'
-                  }
-                  value={form.record_value}
-                  onChange={(e) => setForm({ ...form, record_value: e.target.value })}
-                  className={inputCls}
-                />
+              {/* DNS Records - Multiple */}
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-semibold text-text-primary dark:text-text-primary-dark">
+                  DNS Records <span className="text-text-muted font-normal">(CNAME, A, TXT)</span>
+                </label>
+                {form.dns_records.map((record, idx) => (
+                  <div key={idx} className="mb-3 grid gap-2 rounded-md border border-border p-3 dark:border-border-dark sm:grid-cols-[1fr_2fr_auto]">
+                    <select
+                      required
+                      value={record.type}
+                      onChange={(e) => {
+                        const updated = [...form.dns_records]
+                        updated[idx].type = e.target.value
+                        setForm({ ...form, dns_records: updated })
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">Tipe...</option>
+                      <option value="CNAME">CNAME</option>
+                      <option value="A">A Record</option>
+                      <option value="TXT">TXT</option>
+                    </select>
+                    <input
+                      type="text"
+                      required
+                      placeholder={
+                        record.type === 'CNAME' ? 'contoh.vercel.app' :
+                        record.type === 'A' ? '185.199.108.153' :
+                        'Value...'
+                      }
+                      value={record.value}
+                      onChange={(e) => {
+                        const updated = [...form.dns_records]
+                        updated[idx].value = e.target.value
+                        setForm({ ...form, dns_records: updated })
+                      }}
+                      className={inputCls}
+                    />
+                    <div className="flex gap-2">
+                      {form.dns_records.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="danger"
+                          className="!px-2 !py-1.5 text-xs"
+                          onClick={() => {
+                            const updated = form.dns_records.filter((_, i) => i !== idx)
+                            setForm({ ...form, dns_records: updated })
+                          }}
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {form.dns_records.length < 4 && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="!px-3 !py-1.5 text-xs"
+                    onClick={() => {
+                      setForm({ ...form, dns_records: [...form.dns_records, { type: '', value: '' }] })
+                    }}
+                  >
+                    + Tambah Record
+                  </Button>
+                )}
+                <p className="mt-1 text-xs text-text-muted">
+                  Contoh: CNAME untuk domain utama + TXT untuk verifikasi Vercel
+                </p>
               </div>
 
               <div className="sm:col-span-2">

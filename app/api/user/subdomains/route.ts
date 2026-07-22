@@ -15,7 +15,7 @@ export async function GET() {
 
   const [applications, subdomains] = await Promise.all([
     db.prepare(
-      `SELECT id, subdomain_name, record_type, record_value, status, reject_reason, created_at
+      `SELECT id, subdomain_name, dns_records, record_type, record_value, status, reject_reason, created_at
        FROM subdomain_applications WHERE user_id = ? ORDER BY created_at DESC`
     ).bind(user.id).all(),
     db.prepare(
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body: any = await req.json()
-  const { subdomain_name, record_type, record_value, project_type, project_description,
+  const { subdomain_name, dns_records, project_type, project_description,
     is_public, has_monetization, github_link, linkedin_link, social_link, turnstile_token } = body
 
   // Validate Turnstile
@@ -60,12 +60,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Nama ini tidak tersedia.' }, { status: 400 })
   }
 
-  // Validate record type & value
-  if (!['CNAME', 'A', 'TXT'].includes(record_type)) {
-    return NextResponse.json({ error: 'Tipe record tidak valid. Pilih CNAME, A, atau TXT.' }, { status: 400 })
+  // Validate DNS records array
+  if (!Array.isArray(dns_records) || dns_records.length === 0 || dns_records.length > 4) {
+    return NextResponse.json({ error: 'DNS records harus array dengan 1-4 entries' }, { status: 400 })
   }
-  const valueCheck = validateDNSValue(record_type, record_value)
-  if (!valueCheck.valid) return NextResponse.json({ error: valueCheck.error }, { status: 400 })
+  for (const rec of dns_records) {
+    if (!rec.type || !rec.value) {
+      return NextResponse.json({ error: 'Semua DNS record harus punya type dan value' }, { status: 400 })
+    }
+    if (!['CNAME', 'A', 'TXT'].includes(rec.type)) {
+      return NextResponse.json({ error: 'Tipe record tidak valid' }, { status: 400 })
+    }
+    const valueCheck = validateDNSValue(rec.type, rec.value)
+    if (!valueCheck.valid) return NextResponse.json({ error: valueCheck.error }, { status: 400 })
+  }
 
   if (!project_type || !project_description) {
     return NextResponse.json({ error: 'Project type and description required' }, { status: 400 })
@@ -100,20 +108,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Nama subdomain sudah digunakan atau sedang diproses' }, { status: 409 })
   }
 
-  // Auto-scan untuk quarantine
-  const scan = await autoScanSubdomain(subdomain_name, record_value)
+  // Auto-scan untuk quarantine (scan first DNS record value)
+  const scan = await autoScanSubdomain(subdomain_name, dns_records[0].value)
   const quarantineStatus = scan.passed ? 'quarantine' : 'quarantine'
   // Semua new claim masuk quarantine dulu sampai lolos review atau auto-cleared
 
   await db.prepare(
-    `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
+    `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
       project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
   ).bind(
     user.id,
     subdomain_name.toLowerCase().trim(),
-    record_type.toUpperCase(),
-    record_value.trim(),
+    JSON.stringify(dns_records),
     project_type,
     project_description,
     is_public ? 1 : 0,
