@@ -70,8 +70,9 @@ export async function POST(request: Request) {
 
       const userId = crypto.randomUUID()
       steps.push('insert')
+      const db = await getDB()
 
-      await getDB().prepare(
+      await db.prepare(
         `INSERT INTO users (id, email, username, full_name, password_hash, role, subdomain_limit, email_verified)
          VALUES (?, ?, ?, ?, ?, 'user', 2, 0)`
       ).bind(userId, email, username, fullName, passwordHash).run()

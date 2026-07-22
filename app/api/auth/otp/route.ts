@@ -61,7 +61,8 @@ export async function PUT(request: Request) {
 
   // Mark email verified if register flow
   if (purpose === 'register' && !user.email_verified) {
-    await getDB().prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(user.id).run()
+    const db = await getDB()
+    await db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(user.id).run()
   }
 
   const token = await createSessionToken(user.id)
