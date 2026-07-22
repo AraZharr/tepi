@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
 import NotificationBell from '@/components/NotificationBell'
-import DebugPanel from '@/components/DebugPanel'
 
 const PLATFORMS: Record<string, string> = {
   github_pages: 'GitHub Pages', vercel: 'Vercel', cloudflare_pages: 'Cloudflare Pages', vps: 'VPS', other: 'Lainnya',
@@ -157,7 +156,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      <DebugPanel />
     </main>
   )
 }

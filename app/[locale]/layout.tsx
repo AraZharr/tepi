@@ -8,6 +8,7 @@ import { ThemeInitializer } from '@/components/ThemeInitializer'
 import Footer from '@/components/Footer'
 import '../globals.css'
 import ChatWidget from '@/components/ChatWidget'
+import DebugPanel from '@/components/DebugPanel'
 
 // Footer + auth pages hit D1 via getCloudflareContext — must not prerender static
 export const dynamic = 'force-dynamic'
@@ -71,6 +72,7 @@ export default async function LocaleLayout({
           {children}
           <Footer locale={locale} />
           <ChatWidget />
+          <DebugPanel />
         </NextIntlClientProvider>
       </body>
     </html>
