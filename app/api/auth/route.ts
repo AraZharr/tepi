@@ -68,9 +68,16 @@ export async function POST(request: Request) {
       const passwordHash = await hashPassword(password)
       steps.push('hashOK')
 
+      const db = await getDB()
+
+      // Check username uniqueness before insert
+      const existingUsername = await db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
+      if (existingUsername) {
+        return NextResponse.json({ error: 'Username telah digunakan' }, { status: 400 })
+      }
+
       const userId = crypto.randomUUID()
       steps.push('insert')
-      const db = await getDB()
 
       await db.prepare(
         `INSERT INTO users (id, email, username, full_name, password_hash, role, subdomain_limit, email_verified)
