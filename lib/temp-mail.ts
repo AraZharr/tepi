@@ -30,6 +30,7 @@ const DISPOSABLE_DOMAINS = new Set<string>([
   'mohmal.net', 'mohmal.uk', 'tempemail.co', 'tempinbox.co', 'mailnesia.org', 'mailnull.net',
   'spam4.me', 'spam4.me', 'grr.la', 'sharklasers.net', 'guerrillamail.io', 'guerrillamail.zone',
   'getnada.org', 'nada.email', 'tempmail.ws', 'tempmail.de', 'maildrop.cc', 'maildrop.ga',
+  'kuro.web.id',
   // --- Generator / disposable tambahan ---
   'throwam.com', 'emailtemporario.com.br', 'tempmailaddress.com', 'temp-mail-address.com',
   'fake-mail.cc', 'fakemailgenerator.net', 'tempmailo.net', 'discard.email', 'mailto.plus',

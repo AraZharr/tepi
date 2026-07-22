@@ -132,6 +132,17 @@ export async function POST(req: Request) {
     0,
   )
 
+  // Send confirmation email to user
+  try {
+    const { sendEmail, emailApplicationReceived } = await import('@/lib/email')
+    await sendEmail(emailApplicationReceived(
+      user.full_name || user.email?.split('@')[0] || 'User',
+      subdomain_name
+    ))
+  } catch (err) {
+    console.error('[Subdomain Submit] Failed to send user confirmation email:', err)
+  }
+
   // Log activity
   await db.prepare(
     `INSERT INTO activity_logs (user_id, action, detail, ip_address)
