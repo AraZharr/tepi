@@ -32,56 +32,61 @@ async function validateDomainHasMX(domain: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
-  const body: any = await request.json()
-  const { email, password, username, fullName } = body
+  try {
+    const body: any = await request.json()
+    const { email, password, username, fullName } = body
 
-  if (!email || typeof email !== 'string') {
-    return NextResponse.json({ error: 'Email wajib diisi' }, { status: 400 })
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'Email wajib diisi' }, { status: 400 })
+    }
+
+    const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase().trim()
+
+    const user = await findUserByIdentifier(email)
+    if (user) {
+      // Login path — skip MX/disposable (already registered)
+      if (user.is_suspended) {
+        return NextResponse.json({ error: 'Akun sedang di-suspend' }, { status: 403 })
+      }
+      if (!user.email_verified) {
+        return NextResponse.json({ error: 'Email belum diverifikasi' }, { status: 403 })
+      }
+      if (!(await verifyPassword(password, user.password_hash))) {
+        return NextResponse.json({ error: 'Password salah' }, { status: 401 })
+      }
+    } else {
+      // Register path — anti-abuse checks only for new accounts
+      if (isDisposableEmail(email)) {
+        return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
+      }
+      const hasMX = await validateDomainHasMX(domain)
+      if (!hasMX) {
+        return NextResponse.json(
+          { error: 'Domain email tidak valid atau tidak memiliki record penerimaan email (MX).' },
+          { status: 403 },
+        )
+      }
+
+      const passwordHash = await hashPassword(password)
+      const userId = crypto.randomUUID()
+
+      await getDB().prepare(
+        `INSERT INTO users (id, email, username, full_name, password_hash, role, subdomain_limit, email_verified)
+         VALUES (?, ?, ?, ?, ?, 'user', 2, 0)`
+      ).bind(userId, email, username, fullName, passwordHash).run()
+
+      await issueOtp(email, 'register')
+      return NextResponse.json({ message: 'Kami telah mengirim OTP ke email kamu' }, { status: 201 })
+    }
+
+    const token = await createSessionToken(user.id)
+    const res = NextResponse.json({ token, user: { id: user.id, email, username, full_name: user.full_name, role: user.role } }, { status: 201 })
+    setSessionCookie(res, user.id)
+    return res
+  } catch (err: any) {
+    console.error('[auth] POST error:', err)
+    return NextResponse.json({ error: 'Terjadi kesalahan server. Coba lagi.' }, { status: 500 })
   }
-
-  const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase().trim()
-
-  const user = await findUserByIdentifier(email)
-  if (user) {
-    // Login path — skip MX/disposable (already registered)
-    if (user.is_suspended) {
-      return NextResponse.json({ error: 'Akun sedang di-suspend' }, { status: 403 })
-    }
-    if (!user.email_verified) {
-      return NextResponse.json({ error: 'Email belum diverifikasi' }, { status: 403 })
-    }
-    if (!(await verifyPassword(password, user.password_hash))) {
-      return NextResponse.json({ error: 'Password salah' }, { status: 401 })
-    }
-  } else {
-    // Register path — anti-abuse checks only for new accounts
-    if (isDisposableEmail(email)) {
-      return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
-    }
-    const hasMX = await validateDomainHasMX(domain)
-    if (!hasMX) {
-      return NextResponse.json(
-        { error: 'Domain email tidak valid atau tidak memiliki record penerimaan email (MX).' },
-        { status: 403 },
-      )
-    }
-
-    const passwordHash = await hashPassword(password)
-    const userId = crypto.randomUUID()
-
-    await getDB().prepare(
-      `INSERT INTO users (id, email, username, full_name, password_hash, role, subdomain_limit, email_verified)
-       VALUES (?, ?, ?, ?, ?, 'user', 2, 0)`
-    ).bind(userId, email, username, fullName, passwordHash).run()
-
-    await issueOtp(email, 'register')
-    return NextResponse.json({ message: 'Kami telah mengirim OTP ke email kamu' }, { status: 201 })
-  }
-
-  const token = await createSessionToken(user.id)
-  const res = NextResponse.json({ token, user: { id: user.id, email, username, full_name: user.full_name, role: user.role } }, { status: 201 })
-  setSessionCookie(res, user.id)
-  return res
 }
 
 export async function GET() {

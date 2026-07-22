@@ -171,6 +171,8 @@ export async function issueOtp(email: string, purpose: 'register' | 'login') {
       <p>Kode OTP kamu: <strong style="font-size:20px;letter-spacing:4px">${code}</strong></p>
       <p>Berlaku 10 menit. Jangan bagikan ke siapa pun.</p>
     `,
+  }).catch(() => {
+    console.warn(`[auth] Send email failed for ${email}, OTP still stored in DB`)
   })
 
   return { expiresAt }
