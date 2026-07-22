@@ -120,6 +120,9 @@ export default function DashboardPage() {
             tepi.my.id
           </h1>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <a href="/domains" className="text-xs text-text-secondary hover:text-text-primary sm:text-sm dark:text-text-secondary-dark">
+              Domain
+            </a>
             <a href="/pricing" className="text-xs text-text-secondary hover:text-text-primary sm:text-sm dark:text-text-secondary-dark">
               Harga
             </a>
