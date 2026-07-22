@@ -67,8 +67,8 @@ export async function POST(req: Request) {
   if (!project_type || !project_description) {
     return NextResponse.json({ error: 'Project type and description required' }, { status: 400 })
   }
-  if (project_description.length < 100) {
-    return NextResponse.json({ error: 'Deskripsi minimal 100 karakter' }, { status: 400 })
+  if (project_description.length < 20) {
+    return NextResponse.json({ error: 'Deskripsi minimal 20 karakter' }, { status: 400 })
   }
 
   const db = await getDB()
