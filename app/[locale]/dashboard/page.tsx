@@ -108,7 +108,7 @@ export default function DashboardPage() {
       setFormLoading(false)
 
       if (!res.ok) {
-        setFormError(result.error || 'Gagal submit aplikasi')
+        setFormError(result.error || `Server error: ${res.status} ${res.statusText}`)
         return
       }
 

@@ -84,7 +84,12 @@ export function validateDNSValue(type: string, value: string): ValidationResult 
     return { valid: false, error: 'Nilai record wajib diisi.' }
   }
 
-  const trimmed = value.trim()
+  let trimmed = value.trim()
+  
+  // Strip trailing dot (DNS notation) dari CNAME/A records
+  if ((type === 'CNAME' || type === 'A') && trimmed.endsWith('.')) {
+    trimmed = trimmed.slice(0, -1)
+  }
 
   if (type === 'A') {
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/

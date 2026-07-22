@@ -69,10 +69,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Semua DNS record harus punya type dan value' }, { status: 400 })
     }
     if (!['CNAME', 'A', 'TXT'].includes(rec.type)) {
-      return NextResponse.json({ error: 'Tipe record tidak valid' }, { status: 400 })
+      return NextResponse.json({ error: `Tipe record tidak valid: ${rec.type}` }, { status: 400 })
     }
     const valueCheck = validateDNSValue(rec.type, rec.value)
-    if (!valueCheck.valid) return NextResponse.json({ error: valueCheck.error }, { status: 400 })
+    if (!valueCheck.valid) {
+      return NextResponse.json({ error: `Record ${rec.type}: ${valueCheck.error}` }, { status: 400 })
+    }
   }
 
   if (!project_type || !project_description) {
