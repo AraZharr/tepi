@@ -32,9 +32,19 @@ const DISPOSABLE_DOMAINS = new Set<string>([
   'getnada.org', 'nada.email', 'tempmail.ws', 'tempmail.de', 'maildrop.cc', 'maildrop.ga',
   'kuro.web.id',
   // --- Generator / disposable tambahan ---
-  'throwam.com', 'emailtemporario.com.br', 'tempmailaddress.com', 'temp-mail-address.com',
-  'fake-mail.cc', 'fakemailgenerator.net', 'tempmailo.net', 'discard.email', 'mailto.plus',
-  'einrot.com', 'cuvox.de', 'dayrep.com', 'fleckens.hu', 'gustr.com', 'rhyta.com', 'superrito.com',
+])
+
+// Wildcard patterns (suffix match) — block semua subdomain di bawah domain ini
+const DISPOSABLE_PATTERNS = [
+  '.web.id',      // block semua *.web.id
+  '.tk',          // block semua *.tk (Tokelau free domain)
+  '.ml',          // block semua *.ml (Mali free domain)
+  '.ga',          // block semua *.ga (Gabon free domain)
+  '.cf',          // block semua *.cf (Central African Republic free domain)
+  '.gq',          // block semua *.gq (Equatorial Guinea free domain)
+]
+
+const TRUSTED_DOMAINS = new Set<string>([
   'teleworm.us', 'armyspy.com', 'inboxbear.com', 'inboxbear.com', 'tempr.email', 'tmpmail.net',
   'tempmail.wtf', 'tempmail.dev', 'throwawaymail.co', 'disposablemail.com', 'fakedemail.com',
 ])
@@ -59,8 +69,18 @@ export function getEmailDomain(email: string): string | null {
 export function isDisposableEmail(email: string): boolean {
   const domain = getEmailDomain(email)
   if (!domain) return false
-  if (TRUSTED_DOMAINS.has(domain)) return false
-  return DISPOSABLE_DOMAINS.has(domain)
+  
+  // Exact match check
+  if (DISPOSABLE_DOMAINS.has(domain)) return true
+  
+  // Wildcard pattern check (suffix)
+  for (const pattern of DISPOSABLE_PATTERNS) {
+    if (domain.endsWith(pattern) || domain === pattern.slice(1)) {
+      return true
+    }
+  }
+  
+  return false
 }
 
 export const EMAIL_DOMAIN_BLOCKED_MESSAGE =
