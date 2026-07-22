@@ -275,15 +275,10 @@ export default function DashboardPage() {
                   className={inputCls}
                 >
                   <option value="">Pilih tipe...</option>
-                  <option value="CNAME">CNAME — untuk domain (Vercel, GH Pages, dll)</option>
-                  <option value="A">A Record — untuk IP address (VPS, server langsung)</option>
-                  <option value="TXT">TXT — untuk verifikasi kepemilikan</option>
+                  <option value="CNAME">CNAME</option>
+                  <option value="A">A Record</option>
+                  <option value="TXT">TXT</option>
                 </select>
-                <p className="mt-1 text-xs text-text-muted">
-                  {form.record_type === 'CNAME' && 'Contoh: username.github.io, cname.vercel-dns.com'}
-                  {form.record_type === 'A' && 'Contoh: 185.199.108.153 (IP GitHub Pages)'}
-                  {form.record_type === 'TXT' && 'Untuk verifikasi domain di platform tertentu'}
-                </p>
               </div>
 
               <div>
@@ -292,10 +287,9 @@ export default function DashboardPage() {
                   type="text"
                   required
                   placeholder={
-                    form.record_type === 'CNAME' ? 'username.github.io' :
+                    form.record_type === 'CNAME' ? 'contoh.vercel.app' :
                     form.record_type === 'A' ? '185.199.108.153' :
-                    form.record_type === 'TXT' ? 'verification-string-xxx' :
-                    'Masukkan nilai record...'
+                    'Value...'
                   }
                   value={form.record_value}
                   onChange={(e) => setForm({ ...form, record_value: e.target.value })}
