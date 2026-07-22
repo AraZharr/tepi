@@ -115,22 +115,47 @@ export async function POST(req: Request) {
   const quarantineStatus = scan.passed ? 'quarantine' : 'quarantine'
   // Semua new claim masuk quarantine dulu sampai lolos review atau auto-cleared
 
-  await db.prepare(
-    `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
-      project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
-  ).bind(
-    user.id,
-    subdomain_name.toLowerCase().trim(),
-    JSON.stringify(dns_records),
-    project_type,
-    project_description,
-    is_public ? 1 : 0,
-    has_monetization ? 1 : 0,
-    github_link || null,
-    linkedin_link || null,
-    social_link || null,
-  ).run()
+  // Try insert with dns_records column first (new schema)
+  // Fallback to record_type/record_value if column doesn't exist (old schema)
+  try {
+    await db.prepare(
+      `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+    ).bind(
+      user.id,
+      subdomain_name.toLowerCase().trim(),
+      JSON.stringify(dns_records),
+      project_type,
+      project_description,
+      is_public ? 1 : 0,
+      has_monetization ? 1 : 0,
+      github_link || null,
+      linkedin_link || null,
+      social_link || null,
+    ).run()
+  } catch (err: any) {
+    // Fallback: use old schema (record_type + record_value) for first record only
+    console.warn('[Subdomain Submit] dns_records column not found, using legacy schema:', err.message)
+    const firstRecord = dns_records[0]
+    await db.prepare(
+      `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+    ).bind(
+      user.id,
+      subdomain_name.toLowerCase().trim(),
+      firstRecord.type.toUpperCase(),
+      firstRecord.value.trim(),
+      project_type,
+      project_description,
+      is_public ? 1 : 0,
+      has_monetization ? 1 : 0,
+      github_link || null,
+      linkedin_link || null,
+      social_link || null,
+    ).run()
+  }
 
   // Push notif admin
   notifNewApplication(
