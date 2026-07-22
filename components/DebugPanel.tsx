@@ -1,0 +1,73 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+
+export default function DebugPanel() {
+  const [logs, setLogs] = useState<any[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+
+  useEffect(() => {
+    // Intercept console.error
+    const originalError = console.error
+    console.error = (...args: any[]) => {
+      originalError(...args)
+      setLogs((prev) => [...prev.slice(-9), { type: 'error', msg: args, time: new Date().toLocaleTimeString() }])
+    }
+
+    // Intercept fetch errors via global error handler
+    window.addEventListener('unhandledrejection', (e) => {
+      setLogs((prev) => [...prev.slice(-9), { type: 'reject', msg: [e.reason?.message || e.reason], time: new Date().toLocaleTimeString() }])
+    })
+
+    return () => {
+      console.error = originalError
+    }
+  }, [])
+
+  if (!isOpen && logs.length === 0) return null
+
+  return (
+    <div className="fixed bottom-20 right-4 z-50">
+      {!isOpen ? (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-red text-white shadow-lg hover:bg-red/90"
+          title="Debug Logs"
+        >
+          🐛
+        </button>
+      ) : (
+        <div className="w-80 max-h-96 overflow-auto rounded-lg border border-red bg-black/95 p-3 shadow-xl text-xs font-mono">
+          <div className="flex items-center justify-between mb-2 border-b border-red/30 pb-2">
+            <span className="font-bold text-red">🐛 Debug Log</span>
+            <button onClick={() => setIsOpen(false)} className="text-white hover:text-red">✕</button>
+          </div>
+          {logs.length === 0 ? (
+            <p className="text-gray-400">No errors yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {logs.map((log, i) => (
+                <div key={i} className="border-l-2 border-red pl-2 py-1">
+                  <div className="text-gray-400 text-[10px]">{log.time}</div>
+                  <div className="text-white break-words">
+                    {log.msg.map((m: any, j: number) => (
+                      <div key={j}>
+                        {typeof m === 'object' ? JSON.stringify(m, null, 2) : String(m)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setLogs([])}
+            className="mt-3 w-full rounded bg-red/20 py-1 text-red hover:bg-red/30 text-xs"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
