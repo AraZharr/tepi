@@ -5,6 +5,7 @@ import { createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 import { safeJsonParse } from '@/lib/safe-json'
+import { dispatchWebhook } from '@/lib/webhooks'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   let user
@@ -176,6 +177,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     `Selamat! ${app.subdomain_name}.tepi.my.id kamu sudah aktif.`,
     '/dashboard'
   )
+
+  // Dispatch outgoing webhook
+  await dispatchWebhook(app.user_id as string, 'subdomain.created', {
+    subdomain: app.subdomain_name,
+    full_domain: `${app.subdomain_name}.tepi.my.id`,
+    target_type: primaryRecord.type,
+    target_value: primaryRecord.value,
+    plan: isPaid ? 'paid' : 'free',
+    expires_at: isAdminClaim ? null : expiresAt,
+    ns_addon: app.ns_addon ? 1 : 0,
+  })
 
   return NextResponse.json({ success: true, action: 'approved' })
 }

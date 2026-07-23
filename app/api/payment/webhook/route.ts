@@ -3,6 +3,7 @@ import { getDB } from '@/lib/db'
 import { verifyWebhookSignature } from '@/lib/paywuz'
 import { sendEmail } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
+import { dispatchWebhook } from '@/lib/webhooks'
 
 export async function POST(req: NextRequest) {
   try {
@@ -117,6 +118,16 @@ export async function POST(req: NextRequest) {
       await db.prepare(
         `INSERT INTO activity_logs (user_id, action, detail) VALUES (?, 'payment_paid', ?)`
       ).bind(subdomain.user_id, JSON.stringify({ subdomainId, orderId, amount, nsAddon: isNSAddon })).run()
+
+      // Dispatch webhook
+      await dispatchWebhook(subdomain.user_id as string, 'payment.paid', {
+        subdomainId,
+        subdomainName: subdomain.name,
+        orderId,
+        amount,
+        nsAddon: isNSAddon,
+        expiresAt: subdomain.expires_at,
+      })
 
       console.log('[Paywuz Webhook] Payment processed for subdomain:', subdomainId)
     }
