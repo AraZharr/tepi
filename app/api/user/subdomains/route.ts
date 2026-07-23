@@ -43,14 +43,22 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body: any = await req.json()
+  console.log('[Subdomain Submit] Step 1: Request received', {
+    user_id: user.id,
+    subdomain_name: body.subdomain_name,
+    dns_records_count: body.dns_records?.length
+  })
+  
   const { subdomain_name, dns_records, project_type, project_description,
     is_public, has_monetization, github_link, linkedin_link, social_link, turnstile_token } = body
 
   // Validate Turnstile
   const captchaValid = await verifyTurnstile(turnstile_token || '')
   if (!captchaValid) {
+    console.error('[Subdomain Submit] Step 2: Turnstile FAILED')
     return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 })
   }
+  console.log('[Subdomain Submit] Step 2: Turnstile OK')
 
   // Validate subdomain name
   const nameCheck = validateSubdomainName(subdomain_name)
@@ -86,11 +94,13 @@ export async function POST(req: Request) {
   }
 
   const db = await getDB()
+  console.log('[Subdomain Submit] Step 3: DB connected')
 
   // Check subdomain limit
   const userRecord = await db.prepare('SELECT role, subdomain_limit FROM users WHERE id = ?').bind(user.id).first() as any
   const isAdmin = userRecord?.role === 'admin'
   const maxDomains = userRecord?.subdomain_limit ?? (isAdmin ? 999 : 2)
+  console.log('[Subdomain Submit] Step 4: User limits checked', { isAdmin, maxDomains, user_id: user.id })
 
   if (!isAdmin) {
     const activeCount = await db.prepare(
@@ -107,17 +117,21 @@ export async function POST(req: Request) {
   const existing = await db.prepare(
     `SELECT id FROM subdomains WHERE name = ? UNION SELECT id FROM subdomain_applications WHERE subdomain_name = ? AND status = 'pending'`
   ).bind(subdomain_name, subdomain_name).first()
+  console.log('[Subdomain Submit] Step 5: Availability check', { subdomain_name, exists: !!existing })
   if (existing) {
     return NextResponse.json({ error: 'Nama subdomain sudah digunakan atau sedang diproses' }, { status: 409 })
   }
 
   // Auto-scan untuk quarantine (scan first DNS record value)
+  console.log('[Subdomain Submit] Step 6: Starting auto-scan', { subdomain_name, target: dns_records[0].value })
   const scan = await autoScanSubdomain(subdomain_name, dns_records[0].value)
+  console.log('[Subdomain Submit] Step 6: Auto-scan complete', { passed: scan.passed, issues: scan.issues?.length || 0 })
   const quarantineStatus = scan.passed ? 'quarantine' : 'quarantine'
   // Semua new claim masuk quarantine dulu sampai lolos review atau auto-cleared
 
   // Try insert with dns_records column first (new schema)
   // Fallback to record_type/record_value if column doesn't exist (old schema)
+  console.log('[Subdomain Submit] Step 7: Inserting to DB', { subdomain_name, dns_records_count: dns_records.length })
   try {
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
@@ -135,9 +149,10 @@ export async function POST(req: Request) {
       linkedin_link || null,
       social_link || null,
     ).run()
+    console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
   } catch (err: any) {
     // Fallback: use old schema (record_type + record_value) for first record only
-    console.warn('[Subdomain Submit] dns_records column not found, using legacy schema:', err.message)
+    console.warn('[Subdomain Submit] Step 7: Fallback to legacy schema', { error: err.message })
     const firstRecord = dns_records[0]
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
@@ -156,9 +171,11 @@ export async function POST(req: Request) {
       linkedin_link || null,
       social_link || null,
     ).run()
+    console.log('[Subdomain Submit] Step 7: DB INSERT success (legacy schema)')
   }
 
   // Push notif admin
+  console.log('[Subdomain Submit] Step 8: Sending admin notification')
   notifNewApplication(
     user.full_name || user.email?.split('@')[0] || user.id,
     user.email || '',
@@ -168,6 +185,7 @@ export async function POST(req: Request) {
   )
 
   // Send confirmation email to user
+  console.log('[Subdomain Submit] Step 9: Sending user email')
   try {
     const { sendEmail, emailApplicationReceived } = await import('@/lib/email')
     await sendEmail(emailApplicationReceived(
@@ -179,6 +197,7 @@ export async function POST(req: Request) {
   }
 
   // Log activity
+  console.log('[Subdomain Submit] Step 10: Logging activity')
   await db.prepare(
     `INSERT INTO activity_logs (user_id, action, detail, ip_address)
      VALUES (?, 'claim', ?, ?)`
@@ -200,7 +219,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       error: 'Internal server error',
       message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.stack, // Always show in production for debugging
+      context: 'Top-level catch'
     }, { status: 500 })
   }
 }
