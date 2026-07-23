@@ -565,3 +565,50 @@ export default function DashboardPage() {
                   )}
 
                   {/* Renewal Modal */}
+      {/* Renewal Modal */}
+      <Modal
+        open={renewalModal.open}
+        onClose={() => setRenewalModal({ open: false, subdomain: null, nsAddon: false })}
+        title={"Perpanjang " + (renewalModal.subdomain ? renewalModal.subdomain.name + '.tepi.my.id' : '')}
+      >
+        {renewalModal.subdomain && (
+          <div className="space-y-4">
+            <p className="text-text-secondary dark:text-text-secondary-dark">
+              Pilih paket perpanjangan untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                onClick={async () => {
+                  const res = await csrfFetch('/api/payment/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
+                  })
+                  const data = await res.json()
+                  if (data.checkout_url) window.location.href = data.checkout_url
+                }}
+              >
+                Base (Rp5.000/tahun)
+              </Button>
+              {renewalModal.subdomain.plan === 'paid' && (
+                <Button
+                  onClick={async () => {
+                    const res = await csrfFetch('/api/payment/create', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
+                    })
+                    const data = await res.json()
+                    if (data.checkout_url) window.location.href = data.checkout_url
+                  }}
+                >
+                  Base + NS (Rp6.000/tahun)
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </main>
+  )
+}
