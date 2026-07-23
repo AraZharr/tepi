@@ -33,6 +33,7 @@ jobs:
         run: |
           for pair in \
             "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" \
+            "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
             "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" \
             "TURNSTILE_SECRET_KEY=${{ secrets.TURNSTILE_SECRET_KEY }}" \
             "ADMIN_USER_ID=${{ secrets.ADMIN_USER_ID }}" \
