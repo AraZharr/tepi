@@ -11,9 +11,9 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
-  if (!open) return null
-
+  // hooks must run before early return
   useEffect(() => {
+    if (!open) return
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -23,11 +23,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
     }
-  }, [onClose])
+  }, [open, onClose])
+
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-md bg-bg dark:bg-bg-dark rounded-xl shadow-xl border border-border dark:border-border-dark overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md bg-bg dark:bg-bg-dark rounded-xl shadow-xl border border-border dark:border-border-dark overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-border-dark">
           <h3 className="font-semibold text-text-primary dark:text-text-primary-dark">{title}</h3>
           <button
@@ -38,9 +40,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-4">
-          {children}
-        </div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   )
