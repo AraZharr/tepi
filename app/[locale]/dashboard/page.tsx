@@ -9,7 +9,7 @@ import NotificationBell from '@/components/NotificationBell'
 import TurnstileWidget from '@/components/TurnstileWidget'
 import BulkActions from '@/components/ui/BulkActions'
 
-const PLATFORMS = [...]
+const PLATFORMS = [
   { value: 'github_pages', label: 'GitHub Pages' },
   { value: 'vercel', label: 'Vercel' },
   { value: 'cloudflare_pages', label: 'Cloudflare Pages' },

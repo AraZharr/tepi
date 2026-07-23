@@ -584,23 +584,22 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </Card>
-                      </>
-                    )}
-                  </>}
+          </>
+        )}
 
-                  {/* Bulk Actions Bar */}
-                  {selectedSubdomains.length > 0 && (
-                    <BulkActions
-                      subdomains={data.subdomains.filter(s => selectedSubdomains.includes(s.id))}
-                      onComplete={() => {
-                        setSelectedSubdomains([])
-                        fetchData()
-                      }}
-                      isAdmin={true}
-                    />
-                  )
+        {/* Bulk Actions Bar */}
+        {selectedSubdomains.length > 0 && (
+          <BulkActions
+            subdomains={data.subdomains.filter(s => selectedSubdomains.includes(s.id))}
+            onComplete={() => {
+              setSelectedSubdomains([])
+              fetchData()
+            }}
+            isAdmin={true}
+          />
+        )}
 
-                  {/* ===== APPLICATIONS TAB ===== */}
+        {/* ===== APPLICATIONS TAB ===== */}
         {tab === 'applications' && (
           <>
             <div className="mb-4 flex justify-end">
