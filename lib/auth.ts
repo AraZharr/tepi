@@ -209,7 +209,7 @@ export async function findUserByIdentifier(identifier: string) {
   const id = identifier.trim()
   return db
     .prepare(
-      `SELECT id, email, username, full_name, password_hash, role, subdomain_limit, email_verified, is_suspended
+      `SELECT id, email, username, full_name, password_hash, role, subdomain_limit, email_verified, is_suspended, totp_enabled, totp_secret
        FROM users WHERE email = ? OR username = ? LIMIT 1`
     )
     .bind(id, id)
@@ -223,6 +223,8 @@ export async function findUserByIdentifier(identifier: string) {
       subdomain_limit: number
       email_verified: number
       is_suspended: number
+      totp_enabled: number
+      totp_secret: string | null
     }>()
 }
 

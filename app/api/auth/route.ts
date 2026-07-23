@@ -73,6 +73,15 @@ export async function POST(request: Request) {
       }
       steps.push('verifyPassword')
       if (!(await verifyPassword(password, user.password_hash))) return NextResponse.json({ error: 'Password salah' }, { status: 401 })
+
+      // Check 2FA
+      if (user.totp_enabled) {
+        const { verifyTotpCode } = await import('@/lib/totp')
+        const valid2fa = await verifyTotpCode(user.totp_secret as string, body.totpCode || '')
+        if (!valid2fa) {
+          return NextResponse.json({ error: 'Kode 2FA wajib diisi', requires2fa: true }, { status: 401 })
+        }
+      }
     } else {
       steps.push('isDisposable')
       if (isDisposableEmail(email)) return NextResponse.json({ error: EMAIL_DOMAIN_BLOCKED_MESSAGE }, { status: 403 })
