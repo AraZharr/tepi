@@ -1,0 +1,3 @@
+-- Migration 0020: Bulk operations support
+-- No schema changes needed, operations use existing tables
+-- This is a marker migration for the bulk API feature
