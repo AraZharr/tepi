@@ -48,7 +48,8 @@ export async function POST(request: Request) {
   try {
     steps.push('parse-body')
     const body: any = await request.json()
-    const { email, password, username, fullName } = body
+    const { email, password, username, fullName, remember_me: rememberMeRaw } = body
+    const rememberMe = rememberMeRaw !== false && rememberMeRaw !== 0 && rememberMeRaw !== '0'
     steps.push('got-email:' + email)
 
     if (!email || typeof email !== 'string') {
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
 
     const token = await createSessionToken(user.id)
     const res = NextResponse.json({ token, user: { id: user.id, email, username, full_name: user.full_name, role: user.role } }, { status: 201 })
-    setSessionCookie(res, user.id)
+    setSessionCookie(res, user.id, rememberMe)
     steps.push('success')
     return res
   } catch (err: any) {
@@ -138,7 +139,8 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body: any = await request.json()
-    const { code, identifier, password } = body
+    const { code, identifier, password, remember_me: rememberMeRaw } = body
+    const rememberMe = rememberMeRaw !== false && rememberMeRaw !== 0 && rememberMeRaw !== '0'
 
     if (!code || typeof code !== 'string') return NextResponse.json({ error: 'OTP wajib diisi' }, { status: 400 })
     if (!identifier || typeof identifier !== 'string') return NextResponse.json({ error: 'Email/Username wajib diisi' }, { status: 400 })
@@ -155,7 +157,7 @@ export async function PUT(request: Request) {
 
     const token = await createSessionToken(user.id)
     const res = NextResponse.json({ token, user: { id: user.id, email: user.email, username: user.username, full_name: user.full_name, role: user.role } }, { status: 200 })
-    setSessionCookie(res, user.id)
+    setSessionCookie(res, user.id, rememberMe)
     return res
   } catch (err: any) {
     console.error('[auth] PUT error:', err?.message)

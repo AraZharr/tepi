@@ -6,7 +6,8 @@ import { setCsrfCookie, clearCsrfCookie } from '@/lib/csrf'
 
 const SESSION_COOKIE = 'tepi_session'
 const OTP_TTL_MS = 10 * 60 * 1000
-const SESSION_TTL_SEC = 60 * 60 * 24 * 30
+const SESSION_TTL_SEC = 60 * 60 * 24 * 30 // 30 hari — remember me
+const SESSION_TTL_SHORT_SEC = 60 * 60 * 24 // 1 hari — tanpa remember me (masih maxAge biar HP gak drop)
 const RESET_TTL_MS = 60 * 60 * 1000 // 1 hour
 
 export type AuthUser = {
@@ -72,8 +73,8 @@ export async function verifyPassword(password: string, stored: string) {
   return Buffer.from(bits).toString('hex') === hash
 }
 
-export async function createSessionToken(userId: string) {
-  const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC
+export async function createSessionToken(userId: string, ttlSec = SESSION_TTL_SEC) {
+  const exp = Math.floor(Date.now() / 1000) + ttlSec
   const payload = `${userId}.${exp}`
   const sig = await hmac(payload)
   return `${payload}.${sig}`
@@ -93,17 +94,18 @@ export async function verifySessionToken(token: string): Promise<{ userId: strin
 export function sessionCookieOptions(maxAge = SESSION_TTL_SEC) {
   return {
     httpOnly: true,
-    secure: true, // Always secure (HTTPS only)
+    secure: true,
     sameSite: 'lax' as const,
     path: '/',
     maxAge,
-    domain: process.env.NODE_ENV === 'production' ? 'tepi.my.id' : undefined,
+    // Jangan set domain — host-only cookie lebih stabil di tepi.my.id
   }
 }
 
-export async function setSessionCookie(res: NextResponse, userId: string) {
-  const token = await createSessionToken(userId)
-  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions())
+export async function setSessionCookie(res: NextResponse, userId: string, rememberMe = true) {
+  const ttl = rememberMe ? SESSION_TTL_SEC : SESSION_TTL_SHORT_SEC
+  const token = await createSessionToken(userId, ttl)
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(ttl))
   setCsrfCookie(res)
   return token
 }

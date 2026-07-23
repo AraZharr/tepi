@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +30,12 @@ export default function LoginPage() {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: identifier, password, identifier }),
+        body: JSON.stringify({
+          email: identifier,
+          password,
+          identifier,
+          remember_me: rememberMe,
+        }),
       })
       const data: any = await res.json()
 
@@ -41,21 +47,18 @@ export default function LoginPage() {
 
       // User found and password matches — direct login
       if (data.token) {
-        // Admin users go to /admin, regular users to /dashboard
         const dest = data.user?.role === 'admin' ? '/admin' : '/dashboard'
         router.push(dest)
         router.refresh()
         return
       }
 
-      // Need OTP (register flow for new users, or OTP for login)
       if (data.message) {
         setMessage(data.message)
       } else {
         setMessage('Kode OTP dikirim ke email kamu')
       }
 
-      // Send OTP separately for login
       if (!data.token) {
         await fetch('/api/auth/otp', {
           method: 'POST',
@@ -82,7 +85,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/otp', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: otp, identifier, password }),
+        body: JSON.stringify({ code: otp, identifier, password, remember_me: rememberMe }),
       })
       const data: any = await res.json()
 
@@ -152,6 +155,16 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-text-secondary dark:text-text-secondary-dark cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-border text-blue focus:ring-blue/20"
+              />
+              Ingat saya (tetap login 30 hari)
+            </label>
 
             <TurnstileWidget onVerify={setTurnstileToken} />
 

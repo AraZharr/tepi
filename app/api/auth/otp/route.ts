@@ -70,6 +70,7 @@ export async function PUT(request: Request) {
     token,
     user: { id: user.id, email: user.email, username: user.username, full_name: user.full_name },
   }, { status: 200 })
-  setSessionCookie(res, user.id)
+  const rememberMe = body.remember_me !== false && body.remember_me !== 0 && body.remember_me !== '0'
+  setSessionCookie(res, user.id, rememberMe)
   return res
 }
