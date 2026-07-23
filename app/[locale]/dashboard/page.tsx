@@ -110,7 +110,18 @@ export default function DashboardPage() {
       setFormLoading(false)
 
       if (!res.ok) {
-        setFormError(result.error || `Server error: ${res.status} ${res.statusText}`)
+        const errorMsg = result.message || result.error || `Server error: ${res.status}`
+        setFormError(errorMsg)
+        
+        // Log to debug panel
+        if (result.details || result.message) {
+          console.error('[Submit] Server error:', { 
+            status: res.status, 
+            error: result.error,
+            message: result.message,
+            details: result.details 
+          })
+        }
         return
       }
 
