@@ -10,6 +10,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const subdomainId = searchParams.get('subdomain_id')
+  const nsAddon = searchParams.get('ns_addon') === '1'
+
   if (!subdomainId) return NextResponse.json({ error: 'subdomain_id required' }, { status: 400 })
 
   const db = await getDB()
@@ -19,19 +21,25 @@ export async function GET(req: Request) {
 
   if (!subdomain) return NextResponse.json({ error: 'Subdomain not found' }, { status: 404 })
 
-  const orderId = `TEPI-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+  const BASE_PRICE = 5000
+  const NS_ADDON_PRICE = 1000
+  const amount = nsAddon ? BASE_PRICE + NS_ADDON_PRICE : BASE_PRICE
+
+  const orderId = `tepi-${subdomainId}-${Date.now()}`
   const invoiceNumber = generateInvoiceNumber()
 
   await db.prepare(
-    `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, ns_addon)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?)`
-  ).bind(user.id, subdomainId, orderId, invoiceNumber, amount, ns_addon ? 1 : 0).run()
+    `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
+     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).bind(user.id, subdomainId, orderId, invoiceNumber, amount, BASE_PRICE, nsAddon ? NS_ADDON_PRICE : 0).run()
 
   try {
     const result = await createSubdomainRenewalOrder({
       subdomainId: Number(subdomainId),
-      subdomainName: subdomain.name as string || '',
+      subdomainName: subdomain.name as string,
       userId: user.id,
+      amount,
+      description: nsAddon ? `Renewal + NS Add-on (${subdomain.name}.tepi.my.id)` : `Renewal (${subdomain.name}.tepi.my.id)`,
     })
 
     if (!result.success) {

@@ -7,8 +7,9 @@ import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
 import NotificationBell from '@/components/NotificationBell'
 import TurnstileWidget from '@/components/TurnstileWidget'
+import { Modal } from '@/components/ui/Modal'
 
-const PLATFORMS = [
+const PLATFORMS = [...]
   { value: 'github_pages', label: 'GitHub Pages' },
   { value: 'vercel', label: 'Vercel' },
   { value: 'cloudflare_pages', label: 'Cloudflare Pages' },
@@ -44,22 +45,23 @@ export default function DashboardPage() {
   const [data, setData] = useState<{ applications: any[]; subdomains: any[] }>({ applications: [], subdomains: [] })
 
   const [form, setForm] = useState({
-    subdomain_name: '',
-    dns_records: [{ type: '', value: '' }], // Array of DNS records
-    ns_addon: false,
-    ns_records: ['', '', '', ''],
-    project_type: '',
-    project_description: '',
-    is_public: true,
-    has_monetization: false,
-    github_link: '',
-    linkedin_link: '',
-    social_link: '',
-  })
-  const [formError, setFormError] = useState<string | null>(null)
-  const [formLoading, setFormLoading] = useState(false)
-  const [turnstileToken, setTurnstileToken] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+      subdomain_name: '',
+      dns_records: [{ type: '', value: '' }],
+      ns_addon: false,
+      ns_records: ['', '', '', ''],
+      project_type: '',
+      project_description: '',
+      is_public: true,
+      has_monetization: false,
+      github_link: '',
+      linkedin_link: '',
+      social_link: '',
+    })
+    const [formError, setFormError] = useState<string | null>(null)
+    const [formLoading, setFormLoading] = useState(false)
+    const [turnstileToken, setTurnstileToken] = useState('')
+    const [submitted, setSubmitted] = useState(false)
+    const [renewalModal, setRenewalModal] = useState<{ open: boolean; subdomain: any; nsAddon: boolean }>({ open: false, subdomain: null, nsAddon: false })
 
   useEffect(() => {
     fetch('/api/auth').then(r => r.json()).then((d: any) => {
@@ -224,7 +226,14 @@ export default function DashboardPage() {
                         {STATUS_MAP[s.status]?.label || s.status}
                       </span>
                       {s.status === 'active' && (
-                        <Button variant="secondary" className="!px-3 !py-1 text-xs">Perpanjang</Button>
+                        <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: false })}>
+                          Perpanjang
+                        </Button>
+                      )}
+                      {s.status === 'active' && s.plan === 'paid' && (
+                        <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: true })}>
+                          Perpanjang + NS
+                        </Button>
                       )}
                     </div>
                   </Card>
@@ -503,9 +512,4 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </form>
-          )}
-        </section>
-      </div>
-    </main>
-  )
-}
+          )}\n        </section>\n      </div>\n\n      {/* Renewal Modal */}\n      <Modal\n        open={renewalModal.open}\n        onClose={() => setRenewalModal({ open: false, subdomain: null, nsAddon: false })}\n        title={\"Perpanjang \" + (renewalModal.subdomain ? renewalModal.subdomain.name + '.tepi.my.id' : '')}\n      >\n        {renewalModal.subdomain && (\n          <div className=\"space-y-4\">\n            <p className=\"text-text-secondary dark:text-text-secondary-dark\">\n              Pilih paket perpanjangan untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>\n            </p>\n            <div className=\"grid gap-3 sm:grid-cols-2\">\n              <Button\n                variant={!renewalModal.nsAddon ? 'primary' : 'secondary'}\n                className=\"w-full py-3\"\n                onClick={() => {\n                  setRenewalModal({ open: false, subdomain: null, nsAddon: false })\n                  window.location.href = `/api/payment/create?subdomain_id=${renewalModal.subdomain.id}&ns_addon=0`\n                }}\n              >\n                <div>\n                  <p className=\"font-semibold\">Paket Dasar</p>\n                  <p className=\"text-sm text-text-muted\">Rp5.000/tahun</p>\n                </div>\n              </Button>\n              <Button\n                variant={renewalModal.nsAddon ? 'primary' : 'secondary'}\n                className=\"w-full py-3\"\n                onClick={() => {\n                  setRenewalModal({ open: false, subdomain: null, nsAddon: false })\n                  window.location.href = `/api/payment/create?subdomain_id=${renewalModal.subdomain.id}&ns_addon=1`\n                }}\n              >\n                <div>\n                  <p className=\"font-semibold\">Paket + NS Add-on</p>\n                  <p className=\"text-sm text-text-muted\">Rp6.000/tahun (Rp5.000 + Rp1.000 NS)</p>\n                </div>\n              </Button>\n            </div>\n            <p className=\"text-xs text-text-muted text-center\">Setelah bayar, subdomain otomatis aktif 1 tahun (webhook Paywuz)</p>\n          </div>\n        )}\n      </Modal>\n    </main>\n  )\n}\n

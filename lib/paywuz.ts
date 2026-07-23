@@ -112,12 +112,15 @@ export async function createSubdomainRenewalOrder(params: {
   subdomainId: number
   subdomainName: string
   userId: string
+  amount?: number
+  description?: string
 }): Promise<Result<Transaction>> {
   const orderId = `tepi-${params.subdomainId}-${Date.now()}`
+  const amount = params.amount || 5000
 
   return createTransaction({
     orderId,
-    amount: 5000,
+    amount,
     paymentMethod: 'QRIS',
     metadata: {
       subdomainId: params.subdomainId,
