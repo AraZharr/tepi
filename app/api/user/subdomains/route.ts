@@ -6,7 +6,7 @@ import { isReserved } from '@/lib/reserved'
 import { autoScanSubdomain } from '@/lib/auto-scan'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { notifNewApplication } from '@/lib/admin-notif'
-import { claimRateLimit, addRateLimitHeaders, getClientIP } from '@/lib/rate-limit'
+import { subdomainRateLimit, addRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function GET() {
   const user = await getSessionUser()
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Rate limit by user ID
-    const rlResult = await claimRateLimit(req, user.id)
+    const rlResult = await subdomainRateLimit(req as any, user.id)
     if (!rlResult.success) {
       return addRateLimitHeaders(
         NextResponse.json({ error: 'Terlalu banyak pengajuan. Coba lagi nanti.' }, { status: 429 }),
@@ -53,22 +53,37 @@ export async function POST(req: Request) {
     }
 
     const body: any = await req.json()
+    const {
+      subdomain_name,
+      dns_records,
+      ns_addon,
+      ns_records,
+      project_type,
+      project_description,
+      is_public,
+      has_monetization,
+      github_link,
+      linkedin_link,
+      social_link,
+      turnstile_token,
+    } = body
+
     console.log('[Subdomain Submit] Step 1: Request received', {
       user_id: user.id,
-      subdomain_name: body.subdomain_name,
-      dns_records_count: body.dns_records?.length
+      subdomain_name,
+      dns_records_count: dns_records?.length
     })
 
-  // Validate Turnstile
-  const captchaValid = await verifyTurnstile(turnstile_token || '')
-  if (!captchaValid) {
-    console.error('[Subdomain Submit] Step 2: Turnstile FAILED')
-    return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 })
-  }
-  console.log('[Subdomain Submit] Step 2: Turnstile OK')
+    // Validate Turnstile
+    const captchaValid = await verifyTurnstile(turnstile_token || '')
+    if (!captchaValid) {
+      console.error('[Subdomain Submit] Step 2: Turnstile FAILED')
+      return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 })
+    }
+    console.log('[Subdomain Submit] Step 2: Turnstile OK')
 
-  // Validate subdomain name
-  const nameCheck = validateSubdomainName(subdomain_name)
+    // Validate subdomain name
+    const nameCheck = validateSubdomainName(subdomain_name)
   if (!nameCheck.valid) return NextResponse.json({ error: nameCheck.error }, { status: 400 })
 
   // Double-check reserved names
@@ -243,11 +258,9 @@ export async function POST(req: Request) {
   })
   } catch (error: any) {
     console.error('[Subdomain Submit] Unhandled error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Internal server error',
-      message: error.message,
-      details: error.stack, // Always show in production for debugging
-      context: 'Top-level catch'
+      message: error?.message || 'Unknown error',
     }, { status: 500 })
   }
 }

@@ -82,6 +82,9 @@ export const subdomainRateLimit = rateLimit({
   keyPrefix: 'subdomain',
 })
 
+// alias — older routes import claimRateLimit
+export const claimRateLimit = subdomainRateLimit
+
 export const otpRateLimit = rateLimit({
   windowMs: 60_000, // 1 minute
   maxRequests: 3,
