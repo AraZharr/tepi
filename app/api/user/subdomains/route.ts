@@ -38,6 +38,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  try {
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -194,4 +195,12 @@ export async function POST(req: Request) {
       ? 'Pengajuan diterima! Menunggu review admin.'
       : 'Pengajuan diterima dengan catatan. Kami akan review secara manual.',
   })
+  } catch (error: any) {
+    console.error('[Subdomain Submit] Unhandled error:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 })
+  }
 }
