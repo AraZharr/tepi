@@ -216,24 +216,37 @@ export async function POST(req: Request) {
     console.log('[Subdomain Submit] Step 7: DB INSERT success (legacy schema)')
   }
 
-  // Push notif admin
+  // Push notif admin (await — jangan fire-and-forget tanpa error log)
   console.log('[Subdomain Submit] Step 8: Sending admin notification')
-  notifNewApplication(
-    user.full_name || user.email?.split('@')[0] || user.id,
-    user.email || '',
-    subdomain_name,
-    project_description,
-    0,
-  )
+  try {
+    await notifNewApplication(
+      user.full_name || user.email?.split('@')[0] || user.id,
+      user.email || '',
+      subdomain_name,
+      project_description,
+      0,
+    )
+  } catch (err) {
+    console.error('[Subdomain Submit] Admin notif failed:', err)
+  }
 
   // Send confirmation email to user
   console.log('[Subdomain Submit] Step 9: Sending user email')
   try {
     const { sendEmail, emailApplicationReceived } = await import('@/lib/email')
-    await sendEmail(emailApplicationReceived(
-      user.full_name || user.email?.split('@')[0] || 'User',
-      subdomain_name
-    ))
+    if (!user.email) {
+      console.warn('[Subdomain Submit] User has no email — skip confirmation')
+    } else {
+      const tpl = emailApplicationReceived(
+        user.full_name || user.email.split('@')[0] || 'User',
+        subdomain_name
+      )
+      await sendEmail({
+        to: user.email,
+        subject: tpl.subject,
+        html: tpl.html,
+      })
+    }
   } catch (err) {
     console.error('[Subdomain Submit] Failed to send user confirmation email:', err)
   }

@@ -68,10 +68,14 @@ export async function POST(req: Request) {
           )
 
           try {
-            await sendEmail(emailPaymentSuccess(
+            const tpl = emailPaymentSuccess(
               (subdomain.full_name as string) || (subdomain.email as string),
-              `${subdomain.name as string}.tepi.my.id`
-            ))
+              subdomain.name as string,
+              expiresAt
+            )
+            if (subdomain.email) {
+              await sendEmail({ to: subdomain.email as string, subject: tpl.subject, html: tpl.html })
+            }
           } catch { /* email optional */ }
 
           // Push notif admin

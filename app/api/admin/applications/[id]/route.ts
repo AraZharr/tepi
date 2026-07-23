@@ -43,11 +43,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     ).bind(reject_reason, id).run()
 
     try {
-      await sendEmail(emailApplicationRejected(
+      const tpl = emailApplicationRejected(
         (app.full_name as string) || (app.email as string),
         app.subdomain_name as string,
         reject_reason
-      ))
+      )
+      if (app.email) {
+        await sendEmail({ to: app.email as string, subject: tpl.subject, html: tpl.html })
+      }
     } catch { /* email optional */ }
 
     // In-app notif
@@ -163,10 +166,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   // Send approval email (skip untuk admin claim)
   if (!isAdminClaim) {
     try {
-      await sendEmail(emailApplicationApproved(
+      const tpl = emailApplicationApproved(
         (app.full_name as string) || (app.email as string),
         app.subdomain_name as string
-      ))
+      )
+      if (app.email) {
+        await sendEmail({ to: app.email as string, subject: tpl.subject, html: tpl.html })
+      }
     } catch { /* email optional */ }
   }
 
