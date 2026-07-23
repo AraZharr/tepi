@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
 import NotificationBell from '@/components/NotificationBell'
 import TurnstileWidget from '@/components/TurnstileWidget'
-import { Modal } from '@/components/ui/Modal'
+import BulkActions from '@/components/ui/BulkActions'
 
 const PLATFORMS = [...]
   { value: 'github_pages', label: 'GitHub Pages' },
@@ -62,6 +62,8 @@ export default function DashboardPage() {
     const [turnstileToken, setTurnstileToken] = useState('')
     const [submitted, setSubmitted] = useState(false)
     const [renewalModal, setRenewalModal] = useState<{ open: boolean; subdomain: any; nsAddon: boolean }>({ open: false, subdomain: null, nsAddon: false })
+  const [selectedSubdomains, setSelectedSubdomains] = useState<number[]>([])
+  const [showBulkActions, setShowBulkActions] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth').then(r => r.json()).then((d: any) => {
@@ -201,45 +203,80 @@ export default function DashboardPage() {
               Belum punya subdomain aktif. Ajukan satu!
             </Card>
           ) : (
-            <div className="grid gap-3">
-              {data.subdomains.map((s) => {
-                let remaining = ''
-                if (s.expires_at) {
-                  const exp = new Date(s.expires_at + 'Z')
-                  const now = new Date()
-                  const days = Math.max(0, Math.floor((exp.getTime() - now.getTime()) / 86400000))
-                  remaining = days === 0 ? 'Hari ini' : `${days} hari lagi`
-                }
-                return (
-                  <Card key={s.id} hover={false} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="break-all font-semibold text-text-primary dark:text-text-primary-dark">
-                        {s.name}.tepi.my.id
-                      </p>
-                      <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                        → {s.target_value} ({s.target_type}) · {s.plan}
-                      </p>
-                      {remaining && <p className="mt-0.5 text-xs text-text-muted">Berlaku: {remaining}</p>}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
-                        {STATUS_MAP[s.status]?.label || s.status}
-                      </span>
-                      {s.status === 'active' && (
-                        <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: false })}>
-                          Perpanjang
-                        </Button>
-                      )}
-                      {s.status === 'active' && s.plan === 'paid' && (
-                        <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: true })}>
-                          Perpanjang + NS
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-text-muted">Total: {data.subdomains.length} subdomain</p>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedSubdomains.length === data.subdomains.length && data.subdomains.length > 0}
+                    onChange={() => setSelectedSubdomains(
+                      selectedSubdomains.length === data.subdomains.length
+                        ? []
+                        : data.subdomains.map(s => s.id)
+                    )}
+                    className="rounded border-border bg-bg text-blue focus:ring-blue/20 dark:border-border-dark dark:bg-surface-dark"
+                  />
+                  Pilih semua
+                </label>
+              </div>
+              <div className="grid gap-3">
+                {data.subdomains.map((s) => {
+                  const isSelected = selectedSubdomains.includes(s.id)
+                  let remaining = ''
+                  if (s.expires_at) {
+                    const exp = new Date(s.expires_at + 'Z')
+                    const now = new Date()
+                    const days = Math.max(0, Math.floor((exp.getTime() - now.getTime()) / 86400000))
+                    remaining = days === 0 ? 'Hari ini' : `${days} hari lagi`
+                  }
+                  return (
+                    <Card
+                      key={s.id}
+                      hover={false}
+                      className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${isSelected ? 'ring-2 ring-blue/50 bg-blue/5' : ''}`}
+                    >
+                      <label className="flex items-start gap-3 min-w-0 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => setSelectedSubdomains(prev =>
+                            prev.includes(s.id)
+                              ? prev.filter(x => x !== s.id)
+                              : [...prev, s.id]
+                          )}
+                          className="mt-1 shrink-0 rounded border-border bg-bg text-blue focus:ring-blue/20 dark:border-border-dark dark:bg-surface-dark"
+                        />
+                        <div className="min-w-0">
+                          <p className="break-all font-semibold text-text-primary dark:text-text-primary-dark">
+                            {s.name}.tepi.my.id
+                          </p>
+                          <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
+                            → {s.target_value} ({s.target_type}) · {s.plan}
+                          </p>
+                          {remaining && <p className="mt-0.5 text-xs text-text-muted">Berlaku: {remaining}</p>}
+                        </div>
+                      </label>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${(STATUS_MAP[s.status]?.class) || ''}`}>
+                          {STATUS_MAP[s.status]?.label || s.status}
+                        </span>
+                        {s.status === 'active' && (
+                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: false })}>
+                            Perpanjang
+                          </Button>
+                        )}
+                        {s.status === 'active' && s.plan === 'paid' && (
+                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: true })}>
+                            Perpanjang + NS
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </>
           )}
         </section>
 
@@ -512,4 +549,19 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </form>
-          )}\n        </section>\n      </div>\n\n      {/* Renewal Modal */}\n      <Modal\n        open={renewalModal.open}\n        onClose={() => setRenewalModal({ open: false, subdomain: null, nsAddon: false })}\n        title={\"Perpanjang \" + (renewalModal.subdomain ? renewalModal.subdomain.name + '.tepi.my.id' : '')}\n      >\n        {renewalModal.subdomain && (\n          <div className=\"space-y-4\">\n            <p className=\"text-text-secondary dark:text-text-secondary-dark\">\n              Pilih paket perpanjangan untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>\n            </p>\n            <div className=\"grid gap-3 sm:grid-cols-2\">\n              <Button\n                variant={!renewalModal.nsAddon ? 'primary' : 'secondary'}\n                className=\"w-full py-3\"\n                onClick={() => {\n                  setRenewalModal({ open: false, subdomain: null, nsAddon: false })\n                  window.location.href = `/api/payment/create?subdomain_id=${renewalModal.subdomain.id}&ns_addon=0`\n                }}\n              >\n                <div>\n                  <p className=\"font-semibold\">Paket Dasar</p>\n                  <p className=\"text-sm text-text-muted\">Rp5.000/tahun</p>\n                </div>\n              </Button>\n              <Button\n                variant={renewalModal.nsAddon ? 'primary' : 'secondary'}\n                className=\"w-full py-3\"\n                onClick={() => {\n                  setRenewalModal({ open: false, subdomain: null, nsAddon: false })\n                  window.location.href = `/api/payment/create?subdomain_id=${renewalModal.subdomain.id}&ns_addon=1`\n                }}\n              >\n                <div>\n                  <p className=\"font-semibold\">Paket + NS Add-on</p>\n                  <p className=\"text-sm text-text-muted\">Rp6.000/tahun (Rp5.000 + Rp1.000 NS)</p>\n                </div>\n              </Button>\n            </div>\n            <p className=\"text-xs text-text-muted text-center\">Setelah bayar, subdomain otomatis aktif 1 tahun (webhook Paywuz)</p>\n          </div>\n        )}\n      </Modal>\n    </main>\n  )\n}\n
+                      )}
+                    </section>
+                  </div>
+
+                  {/* Bulk Actions Bar */}
+                  {selectedSubdomains.length > 0 && (
+                    <BulkActions
+                      subdomains={data.subdomains.filter(s => selectedSubdomains.includes(s.id))}
+                      onComplete={() => {
+                        setSelectedSubdomains([])
+                        fetchData()
+                      }}
+                    />
+                  )}
+
+                  {/* Renewal Modal */}

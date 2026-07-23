@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
-import { safeJsonParse } from '@/lib/safe-json'
+import BulkActions from '@/components/ui/BulkActions'
 
 const inputCls =
   'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark'
@@ -70,6 +70,7 @@ export default function AdminUsersPage() {
     expires_at: '', dns_records: [{ type: 'CNAME', value: '' }],
     ns_addon: false, ns_records: ['', '', '', ''] })
   const [sdMode, setSdMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedSubdomains, setSelectedSubdomains] = useState<string[]>([])
 
   // application form
   const [appForm, setAppForm] = useState({ id: '', user_id: '', subdomain_name: '',
@@ -373,11 +374,16 @@ export default function AdminUsersPage() {
         )}
 
         {/* ===== SUBDOMAINS TAB ===== */}
-        {tab === 'subdomains' && (
-          <>
-            <div className="mb-4 flex justify-end">
-              <Button className="!px-3 !py-1.5 text-xs" onClick={startCreateSubdomain}>+ Subdomain Baru</Button>
-            </div>
+          {tab === 'subdomains' && (
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <Button className="!px-3 !py-1.5 text-xs" onClick={startCreateSubdomain}>+ Subdomain Baru</Button>
+                {selectedSubdomains.length > 0 && (
+                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSelectedSubdomains([])}>
+                    Batal Pilih ({selectedSubdomains.length})
+                  </Button>
+                )}
+              </div>
 
             {sdMode && (
                           <Card hover={false} className="mb-4 grid gap-2 p-4">
@@ -493,29 +499,46 @@ export default function AdminUsersPage() {
               {data.subdomains.length === 0 && (
                 <Card hover={false} className="py-8 text-center text-text-muted">Belum ada subdomain</Card>
               )}
-              {data.subdomains.map(s => (
-                <Card key={s.id} hover={false} className="grid gap-1 p-4 text-sm">
-                  <p className="font-semibold break-all">{s.name}.tepi.my.id</p>
-                  <p className="text-text-secondary">
-                    {s.target_type && s.target_value ? `${s.target_type} → ${s.target_value}` : 'Belum dikonfigurasi'}
-                    {s.ns_addon && s.ns_records && (
-                      <>
-                        <br />
-                        <span className="text-xs text-blue">NS Add-on: {safeJsonParse(s.ns_records).length} NS</span>
-                      </>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <StatusBadge status={s.status} />
-                    <span className="text-text-muted">Plan: {s.plan}</span>
-                    {s.expires_at && <span className="text-text-muted">Exp: {String(s.expires_at).slice(0, 10)}</span>}
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button className="!px-3 !py-1.5 text-xs" onClick={() => startEditSubdomain(s)}>Edit</Button>
-                    <Button variant="danger" className="!px-3 !py-1.5 text-xs" disabled={busy} onClick={() => deleteSubdomain(s.id)}>Hapus</Button>
-                  </div>
-                </Card>
-              ))}
+              {data.subdomains.map(s => {
+                                const isSelected = selectedSubdomains.includes(s.id)
+                                return (
+                                  <Card key={s.id} hover={false} className={`grid gap-1 p-4 text-sm ${isSelected ? 'ring-2 ring-blue/50 bg-blue/5' : ''}`}>
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => setSelectedSubdomains(prev =>
+                                          prev.includes(s.id)
+                                            ? prev.filter(x => x !== s.id)
+                                            : [...prev, s.id]
+                                        )}
+                                        className="mt-1 shrink-0 rounded border-border bg-bg text-blue focus:ring-blue/20 dark:border-border-dark dark:bg-surface-dark"
+                                      />
+                                      <div>
+                                        <p className="font-semibold break-all">{s.name}.tepi.my.id</p>
+                                        <p className="text-text-secondary">
+                                          {s.target_type && s.target_value ? `${s.target_type} → ${s.target_value}` : 'Belum dikonfigurasi'}
+                                          {s.ns_addon && s.ns_records && (
+                                            <>
+                                              <br />
+                                              <span className="text-xs text-blue">NS Add-on: {safeJsonParse(s.ns_records).length} NS</span>
+                                            </>
+                                          )}
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                          <StatusBadge status={s.status} />
+                                          <span className="text-text-muted">Plan: {s.plan}</span>
+                                          {s.expires_at && <span className="text-text-muted">Exp: {String(s.expires_at).slice(0, 10)}</span>}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                          <Button className="!px-3 !py-1.5 text-xs" onClick={() => startEditSubdomain(s)}>Edit</Button>
+                                          <Button variant="danger" className="!px-3 !py-1.5 text-xs" disabled={busy} onClick={() => deleteSubdomain(s.id)}>Hapus</Button>
+                                        </div>
+                                      </div>
+                                    </label>
+                                  </Card>
+                                )
+                              })}
             </div>
 
             {/* Desktop: table */}
@@ -561,10 +584,23 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </Card>
-          </>
-        )}
+                      </>
+                    )}
+                  </>}
 
-        {/* ===== APPLICATIONS TAB ===== */}
+                  {/* Bulk Actions Bar */}
+                  {selectedSubdomains.length > 0 && (
+                    <BulkActions
+                      subdomains={data.subdomains.filter(s => selectedSubdomains.includes(s.id))}
+                      onComplete={() => {
+                        setSelectedSubdomains([])
+                        fetchData()
+                      }}
+                      isAdmin={true}
+                    />
+                  )
+
+                  {/* ===== APPLICATIONS TAB ===== */}
         {tab === 'applications' && (
           <>
             <div className="mb-4 flex justify-end">
