@@ -4,6 +4,7 @@ import { getDB } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
 import { hashPassword, verifyPassword, createSessionToken, verifySessionToken, setSessionCookie, clearSessionCookie, getSessionUser, requireUser, issueOtp, consumeOtp, findUserByIdentifier } from '@/lib/auth'
 import { isDisposableEmail, EMAIL_DOMAIN_BLOCKED_MESSAGE } from '@/lib/temp-mail'
+import { authRateLimit, addRateLimitHeaders, getClientIP } from '@/lib/rate-limit'
 
 async function validateDomainHasMX(domain: string): Promise<boolean> {
   const resolvers = [
@@ -33,6 +34,17 @@ async function validateDomainHasMX(domain: string): Promise<boolean> {
 export async function POST(request: Request) {
   const rid = crypto.randomUUID().slice(0, 8)
   const steps: string[] = []
+
+  // Rate limit by IP
+  const clientIP = getClientIP(request as unknown as NextRequest)
+  const rlResult = await authRateLimit(request as unknown as NextRequest, clientIP)
+  if (!rlResult.success) {
+    return addRateLimitHeaders(
+      NextResponse.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, { status: 429 }),
+      rlResult
+    )
+  }
+
   try {
     steps.push('parse-body')
     const body: any = await request.json()

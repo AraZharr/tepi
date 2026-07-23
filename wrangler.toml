@@ -10,5 +10,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "tepi-db"
-# Ganti nilai ini setelah membuat D1 database di Cloudflare dashboard
 database_id = "ba5ea207-393f-478b-9f69-9a3f2568e03c"
+
+[triggers]
+crons = ["0 2 * * *"]

@@ -6,6 +6,7 @@ import { isReserved } from '@/lib/reserved'
 import { autoScanSubdomain } from '@/lib/auto-scan'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { notifNewApplication } from '@/lib/admin-notif'
+import { claimRateLimit, addRateLimitHeaders, getClientIP } from '@/lib/rate-limit'
 
 export async function GET() {
   const user = await getSessionUser()
@@ -39,19 +40,24 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-  const user = await getSessionUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const user = await getSessionUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body: any = await req.json()
-  console.log('[Subdomain Submit] Step 1: Request received', {
-    user_id: user.id,
-    subdomain_name: body.subdomain_name,
-    dns_records_count: body.dns_records?.length
-  })
-  
-  const { subdomain_name, dns_records, project_type, project_description,
-    is_public, has_monetization, github_link, linkedin_link, social_link, 
-    ns_addon, ns_records, turnstile_token } = body
+    // Rate limit by user ID
+    const rlResult = await claimRateLimit(req, user.id)
+    if (!rlResult.success) {
+      return addRateLimitHeaders(
+        NextResponse.json({ error: 'Terlalu banyak pengajuan. Coba lagi nanti.' }, { status: 429 }),
+        rlResult
+      )
+    }
+
+    const body: any = await req.json()
+    console.log('[Subdomain Submit] Step 1: Request received', {
+      user_id: user.id,
+      subdomain_name: body.subdomain_name,
+      dns_records_count: body.dns_records?.length
+    })
 
   // Validate Turnstile
   const captchaValid = await verifyTurnstile(turnstile_token || '')

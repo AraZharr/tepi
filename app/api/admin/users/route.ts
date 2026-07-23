@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
+import { deleteDNSRecord } from '@/lib/cloudflare-dns'
 
 export async function GET() {
   try { await requireAdmin() } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
@@ -88,8 +89,8 @@ export async function PATCH(req: NextRequest) {
     await db.prepare(
       `UPDATE subdomains SET user_id = COALESCE(?, user_id), name = COALESCE(?, name), status = COALESCE(?, status),
        plan = COALESCE(?, plan), expires_at = COALESCE(?, expires_at), target_type = COALESCE(?, target_type),
-       target_value = COALESCE(?, target_value), ns_addon = COALESCE(?, ns_addon) WHERE id = ?`
-    ).bind(user_id ?? null, name ?? null, status ?? null, plan ?? null, expires_at ?? null, target_type ?? null, target_value ?? null, 0, id).run()
+       target_value = COALESCE(?, target_value), ns_addon = COALESCE(?, ns_addon), ns_records = COALESCE(?, ns_records) WHERE id = ?`
+    ).bind(user_id ?? null, name ?? null, status ?? null, plan ?? null, expires_at ?? null, target_type ?? null, target_value ?? null, 0, null, id).run()
     return NextResponse.json({ success: true })
   }
 
@@ -114,10 +115,10 @@ export async function DELETE(req: NextRequest) {
   // Support both query params (legacy) and body
   const url = new URL(req.url)
   const queryId = url.searchParams.get('id')
-  
+
   let id = queryId
   let resource = 'user' // default resource when using query params
-  
+
   // Try body if no query params
   if (!queryId) {
     try {
@@ -128,12 +129,43 @@ export async function DELETE(req: NextRequest) {
       // No body, stick with query params
     }
   }
-  
+
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const db = await getDB()
 
   if (resource === 'subdomain') {
+    // Get subdomain first to find DNS record IDs
+    const subdomain = await db.prepare('SELECT cf_record_id, ns_addon, ns_records, name FROM subdomains WHERE id = ?').bind(id).first() as Record<string, unknown> | null
+
+    if (subdomain) {
+      // Delete primary DNS record
+      if (subdomain.cf_record_id) {
+        await deleteDNSRecord(subdomain.cf_record_id as string)
+      }
+
+      // Delete NS records
+      if (subdomain.ns_addon && subdomain.ns_records) {
+        const nsRecords = JSON.parse(subdomain.ns_records as string) as string[]
+        try {
+          const res = await fetch(
+            `https://api.cloudflare.com/client/v4/zones/${process.env.CF_ZONE_ID}/dns_records?type=NS&name=${subdomain.name}.tepi.my.id`,
+            { headers: { Authorization: `Bearer ${process.env.CF_API_TOKEN}`, 'Content-Type': 'application/json' } }
+          )
+          const data = await res.json() as { success: boolean; result?: { id: string; content: string }[] }
+          if (data.success && data.result) {
+            for (const record of data.result) {
+              if (nsRecords.includes(record.content)) {
+                await deleteDNSRecord(record.id)
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[Admin Delete] NS cleanup failed:', e)
+        }
+      }
+    }
+
     await db.prepare('DELETE FROM subdomains WHERE id = ?').bind(id).run()
     return NextResponse.json({ success: true })
   }
