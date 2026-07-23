@@ -3,24 +3,19 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
 import SiteNav from '@/components/SiteNav'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [validToken, setValidToken] = useState(true)
   
   const token = searchParams.get('token')
   const email = searchParams.get('email')
-
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
-    mode: 'onBlur',
-  })
-
-  const password = watch('password')
 
   useEffect(() => {
     if (!token || !email) {
@@ -29,8 +24,19 @@ export default function ResetPasswordPage() {
     }
   }, [token, email])
 
-  const onSubmit = async (data: { password: string; confirmPassword: string }) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!token || !email) return
+    
+    if (password.length < 8) {
+      setMessage({ type: 'error', text: 'Password minimal 8 karakter' })
+      return
+    }
+    
+    if (password !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Password tidak cocok' })
+      return
+    }
     
     setLoading(true)
     setMessage(null)
@@ -39,7 +45,7 @@ export default function ResetPasswordPage() {
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token, password: data.password }),
+        body: JSON.stringify({ email, token, password }),
       })
       
       const json = await res.json()
@@ -76,8 +82,8 @@ export default function ResetPasswordPage() {
             <div
               className={`mb-4 p-3 rounded-lg text-sm ${
                 message.type === 'success'
-                  ? 'bg-green/10 text-green border border-green/20 dark:bg-green/10 dark:text-green-light dark:border-green/20'
-                  : 'bg-red/10 text-red border border-red/20 dark:bg-red/10 dark:text-red-light dark:border-red/20'
+                  ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                  : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
               }`}
             >
               {message.text}
@@ -94,55 +100,40 @@ export default function ResetPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1">
+                <label htmlFor="password" className="block text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-1">
                   Password Baru
                 </label>
                 <input
                   id="password"
                   type="password"
+                  required
                   autoComplete="new-password"
-                  {...register('password', {
-                    required: 'Password wajib diisi',
-                    minLength: { value: 8, message: 'Minimal 8 karakter' },
-                  })}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-text-primary dark:text-text-primary-dark transition ${
-                    errors.password
-                      ? 'border-red focus:border-red focus:ring-red/20'
-                      : 'border-border bg-bg focus:border-blue focus:ring-blue/20 dark:border-border-dark dark:bg-bg-dark'
-                  }`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
+                  className="w-full rounded-lg border border-border bg-bg px-4 py-2.5 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
                   placeholder="Minimal 8 karakter"
                   disabled={loading}
                 />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red">{errors.password.message}</p>
-                )}
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-1">
                   Konfirmasi Password
                 </label>
                 <input
                   id="confirmPassword"
                   type="password"
+                  required
                   autoComplete="new-password"
-                  {...register('confirmPassword', {
-                    required: 'Konfirmasi password wajib diisi',
-                    validate: (value) => value === password || 'Password tidak cocok',
-                  })}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-text-primary dark:text-text-primary-dark transition ${
-                    errors.confirmPassword
-                      ? 'border-red focus:border-red focus:ring-red/20'
-                      : 'border-border bg-bg focus:border-blue focus:ring-blue/20 dark:border-border-dark dark:bg-bg-dark'
-                  }`}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-bg px-4 py-2.5 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
                   placeholder="Ulangi password"
                   disabled={loading}
                 />
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red">{errors.confirmPassword.message}</p>
-                )}
               </div>
 
               <button

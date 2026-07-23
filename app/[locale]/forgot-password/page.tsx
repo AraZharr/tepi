@@ -2,21 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
 import SiteNav from '@/components/SiteNav'
-import NotificationBell from '@/components/NotificationBell'
 
 export default function ForgotPasswordPage() {
-  const router = useRouter()
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    mode: 'onBlur',
-  })
 
-  const onSubmit = async (data: { email: string }) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
     setMessage(null)
     
@@ -24,7 +18,7 @@ export default function ForgotPasswordPage() {
       const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
       
       const json = await res.json()
@@ -60,41 +54,30 @@ export default function ForgotPasswordPage() {
             <div
               className={`mb-4 p-3 rounded-lg text-sm ${
                 message.type === 'success'
-                  ? 'bg-green/10 text-green border border-green/20 dark:bg-green/10 dark:text-green-light dark:border-green/20'
-                  : 'bg-red/10 text-red border border-red/20 dark:bg-red/10 dark:text-red-light dark:border-red/20'
+                  ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                  : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
               }`}
             >
               {message.text}
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1">
+              <label htmlFor="email" className="block text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-1">
                 Email
               </label>
               <input
                 id="email"
                 type="email"
+                required
                 autoComplete="email"
-                {...register('email', {
-                  required: 'Email wajib diisi',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Format email tidak valid',
-                  },
-                })}
-                className={`w-full rounded-lg border px-4 py-2.5 text-text-primary dark:text-text-primary-dark transition ${
-                  errors.email
-                    ? 'border-red focus:border-red focus:ring-red/20'
-                    : 'border-border bg-bg focus:border-blue focus:ring-blue/20 dark:border-border-dark dark:bg-bg-dark'
-                }`}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-border bg-bg px-4 py-2.5 text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
                 placeholder="kamu@email.com"
                 disabled={loading}
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red">{errors.email.message}</p>
-              )}
             </div>
 
             <button
