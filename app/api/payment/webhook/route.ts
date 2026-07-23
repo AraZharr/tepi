@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { verifyWebhookSignature } from '@/lib/paywuz'
-import { deleteDNSRecord, createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 
@@ -20,7 +19,7 @@ export async function POST(req: NextRequest) {
     console.log('[Paywuz Webhook] Received:', payload.event, payload.data.orderId)
 
     const { event, data } = payload
-    const { orderId, amount, status } = data
+    const { orderId, amount, status, paidAt } = data
 
     // Parse orderId: tepi-{subdomainId}-{timestamp}
     const match = orderId.match(/^tepi-(\d+)-\d+$/)
@@ -43,6 +42,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Subdomain not found' }, { status: 404 })
       }
 
+      // Get payment record to know if NS add-on was included
+      const payment = await db.prepare(
+        'SELECT * FROM payments WHERE order_id = ?'
+      ).bind(orderId).first() as Record<string, unknown> | null
+
+      const isNSAddon = payment && (payment.ns_addon_amount as number) > 0
+      const baseAmount = payment ? (payment.base_amount as number) : 5000
+
       if (subdomain.plan === 'paid' && subdomain.expires_at) {
         // Already paid - extend 1 year from current expiry
         const currentExpiry = new Date((subdomain.expires_at as string).replace(' ', 'T') + 'Z')
@@ -58,16 +65,22 @@ export async function POST(req: NextRequest) {
           .toISOString().replace('T', ' ').replace(/\..*/, '')
 
         await db.prepare(
-          'UPDATE subdomains SET plan = ?, expires_at = ?, updated_at = datetime("now") WHERE id = ?'
+          'UPDATE subdomains SET plan = ?, expires_at = ?, auto_renew = 1, updated_at = datetime("now") WHERE id = ?'
         ).bind('paid', expiresAt, subdomainId).run()
       }
 
-      // Update payment record
+      // Update payment record with receipt info
+      const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/billing/receipt/${orderId}`
       await db.prepare(
-        `UPDATE payments SET status = 'paid', paid_at = datetime("now"), 
-         base_amount = ?, ns_addon_amount = ?
+        `UPDATE payments SET 
+          status = 'paid', 
+          paid_at = datetime("now"), 
+          base_amount = ?, 
+          ns_addon_amount = ?,
+          receipt_sent = 1,
+          receipt_url = ?
          WHERE order_id = ?`
-      ).bind(5000, 0, orderId).run()
+      ).bind(baseAmount, isNSAddon ? 1000 : 0, receiptUrl, orderId).run()
 
       // Get user for notification
       const user = await db.prepare(
@@ -83,7 +96,8 @@ export async function POST(req: NextRequest) {
             html: `
               <p>Halo ${user.full_name || user.email},</p>
               <p>Pembayaran untuk <strong>${subdomain.name}.tepi.my.id</strong> telah dikonfirmasi.</p>
-              <p>Subdomain kamu sekarang <strong>Paid</strong> dan aktif hingga <strong>${new Date(expiresAt).toLocaleDateString('id-ID')}</strong>.</p>
+              <p>Subdomain kamu sekarang <strong>Paid</strong> dan aktif hingga <strong>${new Date(subdomain.expires_at as string).toLocaleDateString('id-ID')}</strong>.</p>
+              <p><a href="${receiptUrl}">Unduh Invoice/Receipt</a></p>
               <p>Terima kasih telah menggunakan tepi.my.id!</p>
             `
           })
@@ -102,7 +116,7 @@ export async function POST(req: NextRequest) {
       // Log activity
       await db.prepare(
         `INSERT INTO activity_logs (user_id, action, detail) VALUES (?, 'payment_paid', ?)`
-      ).bind(subdomain.user_id, JSON.stringify({ subdomainId, orderId, amount })).run()
+      ).bind(subdomain.user_id, JSON.stringify({ subdomainId, orderId, amount, nsAddon: isNSAddon })).run()
 
       console.log('[Paywuz Webhook] Payment processed for subdomain:', subdomainId)
     }

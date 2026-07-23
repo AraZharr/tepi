@@ -19,6 +19,9 @@ export default function SiteNav() {
           <Link href="/pricing" className="text-sm font-medium text-text-secondary transition hover:text-text-primary">
             Harga
           </Link>
+          <Link href="/billing" className="text-sm font-medium text-text-secondary transition hover:text-text-primary">
+            Tagihan
+          </Link>
           <Link href="/contact" className="text-sm font-medium text-text-secondary transition hover:text-text-primary">
             Kontak
           </Link>
