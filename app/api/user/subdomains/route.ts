@@ -135,8 +135,8 @@ export async function POST(req: Request) {
   try {
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', 'pending')`
     ).bind(
       user.id,
       subdomain_name.toLowerCase().trim(),
@@ -158,8 +158,8 @@ export async function POST(req: Request) {
     const firstRecord = dns_records[0]
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, target_platform, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', 'pending')`
     ).bind(
       user.id,
       subdomain_name.toLowerCase().trim(),
