@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
+import { safeJsonParse } from '@/lib/safe-json'
 
 const inputCls =
   'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark'
@@ -16,7 +17,8 @@ interface User {
 }
 interface Subdomain {
   id: string; user_id: string; name: string; status: string; plan: string; expires_at?: string;
-  target_type?: string; target_value?: string; cf_record_id?: string; created_at?: string
+  target_type?: string; target_value?: string; cf_record_id?: string; created_at?: string;
+  ns_addon?: number; ns_records?: string;
 }
 interface Application {
   id: string; user_id: string; subdomain_name: string; status: string; record_type?: string;
@@ -64,9 +66,10 @@ export default function AdminUsersPage() {
   const [userMode, setUserMode] = useState<'create' | 'edit' | null>(null)
 
   // subdomain form
-    const [sdForm, setSdForm] = useState({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
-      expires_at: '', dns_records: [{ type: 'CNAME', value: '' }] })
-    const [sdMode, setSdMode] = useState<'create' | 'edit' | null>(null)
+  const [sdForm, setSdForm] = useState({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
+    expires_at: '', dns_records: [{ type: 'CNAME', value: '' }],
+    ns_addon: false, ns_records: ['', '', '', ''] })
+  const [sdMode, setSdMode] = useState<'create' | 'edit' | null>(null)
 
   // application form
   const [appForm, setAppForm] = useState({ id: '', user_id: '', subdomain_name: '',
@@ -125,49 +128,66 @@ export default function AdminUsersPage() {
   }
 
   // ===== SUBDOMAINS =====
-  function startCreateSubdomain() {
-    setSdForm({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
-      expires_at: '', dns_records: [{ type: 'CNAME', value: '' }] })
-    setSdMode('create')
-  }
-  function startEditSubdomain(s: Subdomain) {
-    const records = s.target_type && s.target_value
-      ? [{ type: s.target_type, value: s.target_value }]
-      : [{ type: 'CNAME', value: '' }]
-    setSdForm({
-      id: s.id, user_id: s.user_id, name: s.name, status: s.status, plan: s.plan,
-      expires_at: s.expires_at ? String(s.expires_at).slice(0, 10) : '',
-      dns_records: records,
-    })
-    setSdMode('edit')
-  }
-  async function saveSubdomain() {
-    if (!sdForm.name || !sdForm.user_id) return alert('Nama subdomain & user_id wajib')
-    // Validate DNS records
-    const validRecords = sdForm.dns_records.filter(r => r.type && r.value.trim())
-    if (validRecords.length === 0) return alert('Minimal 1 DNS record harus diisi')
-    if (validRecords.length > 4) return alert('Maksimal 4 DNS records')
+    function startCreateSubdomain() {
+      setSdForm({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
+        expires_at: '', dns_records: [{ type: 'CNAME', value: '' }],
+        ns_addon: false, ns_records: ['', '', '', ''] })
+      setSdMode('create')
+    }
+    function startEditSubdomain(s: Subdomain) {
+      const records = s.target_type && s.target_value
+        ? [{ type: s.target_type, value: s.target_value }]
+        : [{ type: 'CNAME', value: '' }]
+      const nsRecords = s.ns_records ? safeJsonParse(s.ns_records) : []
+      // Pad to 4 entries
+      while (nsRecords.length < 4) nsRecords.push('')
+      setSdForm({
+        id: s.id, user_id: s.user_id, name: s.name, status: s.status, plan: s.plan,
+        expires_at: s.expires_at ? String(s.expires_at).slice(0, 10) : '',
+        dns_records: records,
+        ns_addon: s.ns_addon || false,
+        ns_records: nsRecords.slice(0, 4),
+      })
+      setSdMode('edit')
+    }
+    async function saveSubdomain() {
+      if (!sdForm.name || !sdForm.user_id) return alert('Nama subdomain & user_id wajib')
+      // Validate DNS records
+      const validRecords = sdForm.dns_records.filter(r => r.type && r.value.trim())
+      if (validRecords.length === 0) return alert('Minimal 1 DNS record harus diisi')
+      if (validRecords.length > 4) return alert('Maksimal 4 DNS records')
 
-    setBusy(true)
-    const isCreate = sdMode === 'create'
-    const res = await csrfFetch('/api/admin/users', {
-      method: isCreate ? 'POST' : 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        resource: 'subdomain', 
-        ...sdForm, 
-        dns_records: JSON.stringify(validRecords),
-        // Backward compat
-        target_type: validRecords[0]?.type || 'CNAME',
-        target_value: validRecords[0]?.value || '',
-      }),
-    })
-    const j = await res.json()
-    setBusy(false)
-    if (!res.ok) return alert(j.error || 'Gagal simpan subdomain')
-    setSdMode(null)
-    fetchData()
-  }
+      // Validate NS addon
+      if (sdForm.ns_addon) {
+        const validNs = sdForm.ns_records.filter(ns => ns.trim())
+        if (validNs.length !== 4) return alert('NS addon butuh tepat 4 nameserver')
+        for (const ns of validNs) {
+          if (!ns.match(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) return alert(`NS tidak valid: ${ns}`)
+        }
+      }
+
+      setBusy(true)
+      const isCreate = sdMode === 'create'
+      const res = await csrfFetch('/api/admin/users', {
+        method: isCreate ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resource: 'subdomain',
+          ...sdForm,
+          dns_records: JSON.stringify(validRecords),
+          ns_addon: sdForm.ns_addon ? 1 : 0,
+          ns_records: sdForm.ns_addon ? JSON.stringify(sdForm.ns_records.filter(ns => ns.trim())) : null,
+          // Backward compat
+          target_type: validRecords[0]?.type || 'CNAME',
+          target_value: validRecords[0]?.value || '',
+        }),
+      })
+      const j = await res.json()
+      setBusy(false)
+      if (!res.ok) return alert(j.error || 'Gagal simpan subdomain')
+      setSdMode(null)
+      fetchData()
+    }
   async function deleteSubdomain(id: string) {
     if (!confirm('Hapus subdomain ini? Record Cloudflare tidak otomatis dihapus.')) return
     setBusy(true)
@@ -360,76 +380,113 @@ export default function AdminUsersPage() {
             </div>
 
             {sdMode && (
-              <Card hover={false} className="mb-4 grid gap-2 p-4">
-                <p className="text-sm font-semibold">{sdMode === 'create' ? 'Tambah Subdomain' : 'Edit Subdomain'}</p>
-                <input className={inputCls} placeholder="User ID" value={sdForm.user_id}
-                  onChange={e => setSdForm(f => ({ ...f, user_id: e.target.value }))} />
-                <div className="flex items-center gap-2">
-                  <input className={inputCls} placeholder="nama" value={sdForm.name}
-                    onChange={e => setSdForm(f => ({ ...f, name: e.target.value }))} />
-                  <span className="text-sm text-text-muted">.tepi.my.id</span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <select className={inputCls} value={sdForm.status}
-                    onChange={e => setSdForm(f => ({ ...f, status: e.target.value }))}>
-                    <option value="active">active</option>
-                    <option value="pending">pending</option>
-                    <option value="suspended">suspended</option>
-                  </select>
-                  <select className={inputCls} value={sdForm.plan}
-                    onChange={e => setSdForm(f => ({ ...f, plan: e.target.value }))}>
-                    <option value="free">free</option>
-                    <option value="paid">paid</option>
-                  </select>
-                </div>
-                <input type="date" className={inputCls} placeholder="Expires" value={sdForm.expires_at}
-                  onChange={e => setSdForm(f => ({ ...f, expires_at: e.target.value }))} />
-                {/* DNS Records - Multiple */}
-                <div className="border-t border-border pt-2 mt-2">
-                  <p className="text-xs font-semibold text-text-secondary mb-2">DNS Records</p>
-                  {sdForm.dns_records.map((rec, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2 items-center">
-                      <select className={inputCls} style={{width: '90px'}} value={rec.type}
-                        onChange={e => {
-                          const updated = [...sdForm.dns_records]
-                          updated[idx] = { ...updated[idx], type: e.target.value }
-                          setSdForm(f => ({ ...f, dns_records: updated }))
-                        }}>
-                        <option value="CNAME">CNAME</option>
-                        <option value="A">A</option>
-                        <option value="TXT">TXT</option>
-                      </select>
-                      <input className={inputCls} flex placeholder={rec.type === 'CNAME' ? 'contoh.vercel.app' : rec.type === 'A' ? '1.2.3.4' : 'value'}
-                        value={rec.value}
-                        onChange={e => {
-                          const updated = [...sdForm.dns_records]
-                          updated[idx] = { ...updated[idx], value: e.target.value }
-                          setSdForm(f => ({ ...f, dns_records: updated }))
-                        }} />
-                      {sdForm.dns_records.length > 1 && (
-                        <Button variant="secondary" className="!px-2 !py-1.5 text-xs h-8" 
-                          onClick={() => {
-                            const updated = sdForm.dns_records.filter((_, i) => i !== idx)
-                            setSdForm(f => ({ ...f, dns_records: updated }))
-                          }}>
-                          Hapus
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="secondary" className="!px-2 !py-1.5 text-xs" 
-                    onClick={() => setSdForm(f => ({ ...f, dns_records: [...f.dns_records, { type: 'CNAME', value: '' }] }))}>
-                    + Tambah Record
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button className="!px-3 !py-1.5 text-xs" disabled={busy} onClick={saveSubdomain}>
-                    {busy ? '...' : 'Simpan'}
-                  </Button>
-                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSdMode(null)}>Batal</Button>
-                </div>
-              </Card>
-            )}
+                          <Card hover={false} className="mb-4 grid gap-2 p-4">
+                            <p className="text-sm font-semibold">{sdMode === 'create' ? 'Tambah Subdomain' : 'Edit Subdomain'}</p>
+                            <input className={inputCls} placeholder="User ID" value={sdForm.user_id}
+                              onChange={e => setSdForm(f => ({ ...f, user_id: e.target.value }))} />
+                            <div className="flex items-center gap-2">
+                              <input className={inputCls} placeholder="nama" value={sdForm.name}
+                                onChange={e => setSdForm(f => ({ ...f, name: e.target.value }))} />
+                              <span className="text-sm text-text-muted">.tepi.my.id</span>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <select className={inputCls} value={sdForm.status}
+                                onChange={e => setSdForm(f => ({ ...f, status: e.target.value }))}>
+                                <option value="active">active</option>
+                                <option value="pending">pending</option>
+                                <option value="suspended">suspended</option>
+                              </select>
+                              <select className={inputCls} value={sdForm.plan}
+                                onChange={e => setSdForm(f => ({ ...f, plan: e.target.value }))}>
+                                <option value="free">free</option>
+                                <option value="paid">paid</option>
+                              </select>
+                            </div>
+                            <input type="date" className={inputCls} placeholder="Expires" value={sdForm.expires_at}
+                              onChange={e => setSdForm(f => ({ ...f, expires_at: e.target.value }))} />
+                            {/* DNS Records - Multiple */}
+                            <div className="border-t border-border pt-2 mt-2">
+                              <p className="text-xs font-semibold text-text-secondary mb-2">DNS Records</p>
+                              {sdForm.dns_records.map((rec, idx) => (
+                                <div key={idx} className="flex gap-2 mb-2 items-center">
+                                  <select className={inputCls} style={{width: '90px'}} value={rec.type}
+                                    onChange={e => {
+                                      const updated = [...sdForm.dns_records]
+                                      updated[idx] = { ...updated[idx], type: e.target.value }
+                                      setSdForm(f => ({ ...f, dns_records: updated }))
+                                    }}>
+                                    <option value="CNAME">CNAME</option>
+                                    <option value="A">A</option>
+                                    <option value="TXT">TXT</option>
+                                  </select>
+                                  <input className={inputCls} flex placeholder={rec.type === 'CNAME' ? 'contoh.vercel.app' : rec.type === 'A' ? '1.2.3.4' : 'value'}
+                                    value={rec.value}
+                                    onChange={e => {
+                                      const updated = [...sdForm.dns_records]
+                                      updated[idx] = { ...updated[idx], value: e.target.value }
+                                      setSdForm(f => ({ ...f, dns_records: updated }))
+                                    }} />
+                                  {sdForm.dns_records.length > 1 && (
+                                    <Button variant="secondary" className="!px-2 !py-1.5 text-xs h-8"
+                                      onClick={() => {
+                                        const updated = sdForm.dns_records.filter((_, i) => i !== idx)
+                                        setSdForm(f => ({ ...f, dns_records: updated }))
+                                      }}>
+                                      Hapus
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                              <Button variant="secondary" className="!px-2 !py-1.5 text-xs"
+                                onClick={() => setSdForm(f => ({ ...f, dns_records: [...f.dns_records, { type: 'CNAME', value: '' }] }))}>
+                                + Tambah Record
+                              </Button>
+                            </div>
+                            {/* NS Add-on (Paid only) */}
+                            <div className="border-t border-border pt-2 mt-2">
+                              <label className="flex items-start gap-2 mb-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={sdForm.ns_addon}
+                                  onChange={e => setSdForm(f => ({ ...f, ns_addon: e.target.checked }))}
+                                  className="mt-1 rounded border-border bg-bg text-blue focus:ring-blue/20"
+                                />
+                                <span className="text-sm font-semibold text-text-primary">
+                                  NS Add-on (+Rp1.000/tahun) — Delegasi nameserver penuh
+                                </span>
+                              </label>
+                              {sdForm.ns_addon && (
+                                <div className="ml-6 grid gap-2 sm:grid-cols-2">
+                                  {sdForm.ns_records.map((ns, idx) => (
+                                    <div key={idx} className="grid gap-2 sm:grid-cols-[auto_1fr]">
+                                      <span className="text-sm text-text-muted shrink-0 w-10">NS{idx + 1}</span>
+                                      <input
+                                        type="text"
+                                        placeholder="ns1.provider.com"
+                                        value={ns}
+                                        onChange={e => {
+                                          const updated = [...sdForm.ns_records]
+                                          updated[idx] = e.target.value.toLowerCase().replace(/\.$/, '')
+                                          setSdForm(f => ({ ...f, ns_records: updated }))
+                                        }}
+                                        className={inputCls}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="mt-1 text-xs text-text-muted">
+                                Tambah 4 nameserver untuk delegasi zone penuh (contoh: Cloudflare, AWS Route53)
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button className="!px-3 !py-1.5 text-xs" disabled={busy} onClick={saveSubdomain}>
+                                {busy ? '...' : 'Simpan'}
+                              </Button>
+                              <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setSdMode(null)}>Batal</Button>
+                            </div>
+                          </Card>
+                        )}
 
             {/* Mobile: cards */}
             <div className="grid gap-3 md:hidden">
@@ -441,6 +498,12 @@ export default function AdminUsersPage() {
                   <p className="font-semibold break-all">{s.name}.tepi.my.id</p>
                   <p className="text-text-secondary">
                     {s.target_type && s.target_value ? `${s.target_type} → ${s.target_value}` : 'Belum dikonfigurasi'}
+                    {s.ns_addon && s.ns_records && (
+                      <>
+                        <br />
+                        <span className="text-xs text-blue">NS Add-on: {safeJsonParse(s.ns_records).length} NS</span>
+                      </>
+                    )}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <StatusBadge status={s.status} />
@@ -462,6 +525,7 @@ export default function AdminUsersPage() {
                   <tr className="border-b border-border text-left text-text-muted dark:border-border-dark">
                     <th className="p-3 font-medium">Name</th>
                     <th className="p-3 font-medium">Record</th>
+                    <th className="p-3 font-medium">NS Add-on</th>
                     <th className="p-3 font-medium">Status</th>
                     <th className="p-3 font-medium">Plan</th>
                     <th className="p-3 font-medium">Expires</th>
@@ -469,21 +533,31 @@ export default function AdminUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.subdomains.map(s => (
-                    <tr key={s.id} className="border-b border-border/50 dark:border-border-dark/50">
-                      <td className="p-3 font-medium">{s.name}.tepi.my.id</td>
-                      <td className="p-3 text-text-muted text-xs">{s.target_type} → {s.target_value || '-'}</td>
-                      <td className="p-3"><StatusBadge status={s.status} /></td>
-                      <td className="p-3">{s.plan}</td>
-                      <td className="p-3 text-text-muted text-xs">{s.expires_at ? String(s.expires_at).slice(0, 10) : '-'}</td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
-                          <Button className="!px-2 !py-1 text-xs" onClick={() => startEditSubdomain(s)}>Edit</Button>
-                          <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy} onClick={() => deleteSubdomain(s.id)}>Hapus</Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {data.subdomains.map(s => {
+                    const nsRecords = s.ns_records ? safeJsonParse(s.ns_records) : []
+                    return (
+                      <tr key={s.id} className="border-b border-border/50 dark:border-border-dark/50">
+                        <td className="p-3 font-medium">{s.name}.tepi.my.id</td>
+                        <td className="p-3 text-text-muted text-xs">{s.target_type} → {s.target_value || '-'}</td>
+                        <td className="p-3 text-xs">
+                          {s.ns_addon && nsRecords.length > 0 ? (
+                            <span className="text-blue">{nsRecords.length} NS</span>
+                          ) : (
+                            <span className="text-text-muted">-</span>
+                          )}
+                        </td>
+                        <td className="p-3"><StatusBadge status={s.status} /></td>
+                        <td className="p-3">{s.plan}</td>
+                        <td className="p-3 text-text-muted text-xs">{s.expires_at ? String(s.expires_at).slice(0, 10) : '-'}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button className="!px-2 !py-1 text-xs" onClick={() => startEditSubdomain(s)}>Edit</Button>
+                            <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy} onClick={() => deleteSubdomain(s.id)}>Hapus</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </Card>

@@ -62,12 +62,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // Approve — create DNS records + subdomain
   const recordName = `${app.subdomain_name as string}.tepi.my.id`
-  const dnsRecords = app.dns_records ? (safeJsonParse(app.dns_records as string) || [{ type: app.record_type || 'CNAME', value: app.record_value || '' }]) : 
+  const dnsRecords = app.dns_records ? (safeJsonParse(app.dns_records as string) || [{ type: app.record_type || 'CNAME', value: app.record_value || '' }]) :
     [{ type: app.record_type || 'CNAME', value: app.record_value || '' }] // Backward compat
+
+  // Also get NS records if add-on enabled
+  const nsRecords = app.ns_records ? (safeJsonParse(app.ns_records as string) || []) : []
 
   const createdRecords: any[] = []
 
-  // Create all DNS records
+  // Create all DNS records (CNAME, A, TXT)
   for (const rec of dnsRecords) {
     const dnsResult = await createDNSRecord({
       type: rec.type as 'CNAME' | 'A' | 'TXT',
@@ -93,6 +96,32 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     createdRecords.push({ type: rec.type, value: rec.value, cf_record_id: dnsResult.result?.id })
   }
 
+  // Create NS records if add-on enabled
+  if (app.ns_addon && nsRecords.length > 0) {
+    for (const ns of nsRecords) {
+      const dnsResult = await createDNSRecord({
+        type: 'NS',
+        name: recordName,
+        content: ns,
+        proxied: false, // NS records cannot be proxied
+      })
+
+      if (!dnsResult.success) {
+        console.error('[Admin Approve] NS record creation failed:', {
+          subdomain: app.subdomain_name,
+          ns,
+          error: dnsResult.error,
+        })
+        return NextResponse.json({ 
+          error: `NS record creation failed: ${dnsResult.error}`,
+          _debug: { ns, name: recordName }
+        }, { status: 500 })
+      }
+
+      createdRecords.push({ type: 'NS', value: ns, cf_record_id: dnsResult.result?.id })
+    }
+  }
+
   // Use first record as primary target for subdomain table
   const primaryRecord = createdRecords[0]
 
@@ -102,19 +131,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   ).bind(id).run()
 
   // Create subdomain — langsung active (admin approved = trusted)
-  const expiresAt = new Date(Date.now() + 90 * 86400000).toISOString().replace('T', ' ').replace(/\..*/, '') // free 3 bulan
+  // Determine plan: free = 3 months, paid = 1 year (if paid)
+  const isPaid = (app.plan as string) === 'paid' || (app.ns_addon as number) === 1
+  const expiresAt = new Date(Date.now() + (isPaid ? 365 : 90) * 86400000).toISOString().replace('T', ' ').replace(/\..*/, '')
   const isAdminClaim = (app.role as string) === 'admin'
 
   await db.prepare(
-    `INSERT INTO subdomains (user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at)
-     VALUES (?, ?, ?, ?, ?, 'active', 'free', ?)`
+    `INSERT INTO subdomains (user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at, ns_addon)
+     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)`
   ).bind(
     app.user_id,
     app.subdomain_name,
     primaryRecord.type,
     primaryRecord.value,
     primaryRecord.cf_record_id ?? null,
-    isAdminClaim ? null : expiresAt // Admin = never expires
+    isPaid ? 'paid' : 'free',
+    isAdminClaim ? null : expiresAt,
+    app.ns_addon ? 1 : 0
   ).run()
 
   // Log activity

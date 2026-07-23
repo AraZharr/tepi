@@ -46,6 +46,8 @@ export default function DashboardPage() {
   const [form, setForm] = useState({
     subdomain_name: '',
     dns_records: [{ type: '', value: '' }], // Array of DNS records
+    ns_addon: false,
+    ns_records: ['', '', '', ''],
     project_type: '',
     project_description: '',
     is_public: true,
@@ -93,7 +95,13 @@ export default function DashboardPage() {
       const res = await csrfFetch('/api/user/subdomains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, dns_records: validRecords, turnstile_token: turnstileToken }),
+        body: JSON.stringify({ 
+        ...form, 
+        dns_records: validRecords,
+        ns_addon: form.ns_addon,
+        ns_records: form.ns_addon ? form.ns_records.filter(ns => ns.trim()) : [],
+        turnstile_token: turnstileToken 
+      }),
       })
       
       let result: any
@@ -372,6 +380,44 @@ export default function DashboardPage() {
                 )}
                 <p className="mt-1 text-xs text-text-muted">
                   Contoh: CNAME untuk domain utama + TXT untuk verifikasi Vercel
+                </p>
+              </div>
+
+              {/* NS Add-on (Paid only) */}
+              <div className="sm:col-span-2">
+                <label className="flex items-start gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={form.ns_addon}
+                    onChange={(e) => setForm({ ...form, ns_addon: e.target.checked })}
+                    className="mt-1 rounded border-border bg-bg text-blue focus:ring-blue/20 dark:border-border-dark dark:bg-surface-dark"
+                  />
+                  <span className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">
+                    NS Add-on (+Rp1.000/tahun) — Delegasi nameserver penuh
+                  </span>
+                </label>
+                {form.ns_addon && (
+                  <div className="ml-6 grid gap-2 sm:grid-cols-2">
+                    {form.ns_records.map((ns, idx) => (
+                      <div key={idx} className="grid gap-2 sm:grid-cols-[auto_1fr]">
+                        <span className="text-sm text-text-muted shrink-0 w-10">NS{idx + 1}</span>
+                        <input
+                          type="text"
+                          placeholder="ns1.provider.com"
+                          value={ns}
+                          onChange={(e) => {
+                            const updated = [...form.ns_records]
+                            updated[idx] = e.target.value.toLowerCase().replace(/\.$/, '')
+                            setForm({ ...form, ns_records: updated })
+                          }}
+                          className={inputCls}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-text-muted">
+                  Tambah 4 nameserver untuk delegasi zone penuh (contoh: Cloudflare, AWS Route53)
                 </p>
               </div>
 

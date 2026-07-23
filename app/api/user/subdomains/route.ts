@@ -50,7 +50,8 @@ export async function POST(req: Request) {
   })
   
   const { subdomain_name, dns_records, project_type, project_description,
-    is_public, has_monetization, github_link, linkedin_link, social_link, turnstile_token } = body
+    is_public, has_monetization, github_link, linkedin_link, social_link, 
+    ns_addon, ns_records, turnstile_token } = body
 
   // Validate Turnstile
   const captchaValid = await verifyTurnstile(turnstile_token || '')
@@ -122,6 +123,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Nama subdomain sudah digunakan atau sedang diproses' }, { status: 409 })
   }
 
+  // Validate NS addon if enabled
+  if (ns_addon) {
+    if (!Array.isArray(ns_records) || ns_records.length !== 4) {
+      return NextResponse.json({ error: 'NS addon butuh tepat 4 nameserver' }, { status: 400 })
+    }
+    for (const ns of ns_records) {
+      if (!ns || !ns.match(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+        return NextResponse.json({ error: `NS tidak valid: ${ns}` }, { status: 400 })
+      }
+    }
+  }
+
   // Auto-scan untuk quarantine (scan first DNS record value)
   console.log('[Subdomain Submit] Step 6: Starting auto-scan', { subdomain_name, target: dns_records[0].value })
   const scan = await autoScanSubdomain(subdomain_name, dns_records[0].value)
@@ -131,12 +144,12 @@ export async function POST(req: Request) {
 
   // Try insert with dns_records column first (new schema)
   // Fallback to record_type/record_value if column doesn't exist (old schema)
-  console.log('[Subdomain Submit] Step 7: Inserting to DB', { subdomain_name, dns_records_count: dns_records.length })
+  console.log('[Subdomain Submit] Step 7: Inserting to DB', { subdomain_name, dns_records_count: dns_records.length, ns_addon: !!ns_addon })
   try {
       await db.prepare(
         `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
-          project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, target_url, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
+          project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, target_url, status, ns_addon, ns_records)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending', ?, ?)`
       ).bind(
         user.id,
         subdomain_name.toLowerCase().trim(),
@@ -151,17 +164,18 @@ export async function POST(req: Request) {
         dns_records[0].type.toUpperCase(),
         dns_records[0].value.trim(),
         dns_records[0].value.trim(),
+        ns_addon ? 1 : 0,
+        ns_addon ? JSON.stringify(ns_records) : null,
       ).run()
       console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
-    console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
   } catch (err: any) {
     // Fallback: use old schema (record_type + record_value) for first record only
     console.warn('[Subdomain Submit] Step 7: Fallback to legacy schema', { error: err.message })
     const firstRecord = dns_records[0]
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, target_platform, target_url, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, target_platform, target_url, status, ns_addon, ns_records)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending', ?, ?)`
     ).bind(
       user.id,
       subdomain_name.toLowerCase().trim(),
@@ -175,6 +189,8 @@ export async function POST(req: Request) {
       linkedin_link || null,
       social_link || null,
       firstRecord.value.trim(),
+      ns_addon ? 1 : 0,
+      ns_addon ? JSON.stringify(ns_records) : null,
     ).run()
     console.log('[Subdomain Submit] Step 7: DB INSERT success (legacy schema)')
   }

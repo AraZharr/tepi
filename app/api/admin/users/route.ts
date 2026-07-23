@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     if (!user_id || !name) return NextResponse.json({ error: 'user_id dan name wajib' }, { status: 400 })
     const id = `sd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     await db.prepare(
-      `INSERT INTO subdomains (id, user_id, name, status, plan, expires_at, target_type, target_value)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, user_id, name, status || 'active', plan || 'free', expires_at || null, target_type || 'CNAME', target_value || '').run()
+      `INSERT INTO subdomains (id, user_id, name, status, plan, expires_at, target_type, target_value, ns_addon)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, user_id, name, status || 'active', plan || 'free', expires_at || null, target_type || 'CNAME', target_value || '', 0).run()
     return NextResponse.json({ success: true, id })
   }
 
@@ -56,9 +56,9 @@ export async function POST(req: NextRequest) {
     if (!user_id || !subdomain_name) return NextResponse.json({ error: 'user_id dan subdomain_name wajib' }, { status: 400 })
     const id = `app_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     await db.prepare(
-      `INSERT INTO subdomain_applications (id, user_id, subdomain_name, record_type, record_value, status)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, user_id, subdomain_name, record_type || 'CNAME', record_value || '', status || 'pending').run()
+      `INSERT INTO subdomain_applications (id, user_id, subdomain_name, record_type, record_value, status, ns_addon, ns_records)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, user_id, subdomain_name, record_type || 'CNAME', record_value || '', status || 'pending', 0, null).run()
     return NextResponse.json({ success: true, id })
   }
 
@@ -88,8 +88,8 @@ export async function PATCH(req: NextRequest) {
     await db.prepare(
       `UPDATE subdomains SET user_id = COALESCE(?, user_id), name = COALESCE(?, name), status = COALESCE(?, status),
        plan = COALESCE(?, plan), expires_at = COALESCE(?, expires_at), target_type = COALESCE(?, target_type),
-       target_value = COALESCE(?, target_value) WHERE id = ?`
-    ).bind(user_id ?? null, name ?? null, status ?? null, plan ?? null, expires_at ?? null, target_type ?? null, target_value ?? null, id).run()
+       target_value = COALESCE(?, target_value), ns_addon = COALESCE(?, ns_addon) WHERE id = ?`
+    ).bind(user_id ?? null, name ?? null, status ?? null, plan ?? null, expires_at ?? null, target_type ?? null, target_value ?? null, 0, id).run()
     return NextResponse.json({ success: true })
   }
 
@@ -98,8 +98,9 @@ export async function PATCH(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
     await db.prepare(
       `UPDATE subdomain_applications SET user_id = COALESCE(?, user_id), subdomain_name = COALESCE(?, subdomain_name),
-       record_type = COALESCE(?, record_type), record_value = COALESCE(?, record_value), status = COALESCE(?, status) WHERE id = ?`
-    ).bind(user_id ?? null, subdomain_name ?? null, record_type ?? null, record_value ?? null, status ?? null, id).run()
+       record_type = COALESCE(?, record_type), record_value = COALESCE(?, record_value), status = COALESCE(?, status),
+       ns_addon = COALESCE(?, ns_addon), ns_records = COALESCE(?, ns_records) WHERE id = ?`
+    ).bind(user_id ?? null, subdomain_name ?? null, record_type ?? null, record_value ?? null, status ?? null, 0, null, id).run()
     return NextResponse.json({ success: true })
   }
 
