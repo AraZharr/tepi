@@ -95,3 +95,42 @@ export async function deleteDNSRecord(
   }
   return { success: true }
 }
+
+/**
+ * Vercel cross-account verify — is-a.dev style.
+ * User paste: vc-domain-verify=<name>.tepi.my.id,<token>
+ * We create TXT at _vercel.tepi.my.id (multi-TXT allowed on same name).
+ */
+export async function createVercelVerifyTXT(
+  content: string
+): Promise<{ success: boolean; result?: DNSRecordResult; error?: string; alreadyExists?: boolean }> {
+  const zoneId = process.env.CF_ZONE_ID
+  if (!zoneId) return { success: false, error: 'CF_ZONE_ID missing' }
+
+  // Dedup: skip if same TXT already on _vercel
+  const listRes = await fetch(
+    `${CF_API}/zones/${zoneId}/dns_records?type=TXT&name=_vercel.tepi.my.id&per_page=100`,
+    { headers: getHeaders() }
+  )
+  const listData = await listRes.json() as {
+    success: boolean
+    result?: { id: string; content: string }[]
+  }
+  if (listData.success && listData.result) {
+    const exists = listData.result.find((r) => r.content === content || r.content === `"${content}"`)
+    if (exists) {
+      return {
+        success: true,
+        alreadyExists: true,
+        result: { id: exists.id, type: 'TXT', name: '_vercel.tepi.my.id', content: exists.content, proxied: false },
+      }
+    }
+  }
+
+  return createDNSRecord({
+    type: 'TXT',
+    name: '_vercel.tepi.my.id',
+    content,
+    proxied: false,
+  })
+}

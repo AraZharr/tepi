@@ -65,6 +65,10 @@ export default function DashboardPage() {
     const [renewalModal, setRenewalModal] = useState<{ open: boolean; subdomain: any; nsAddon: boolean }>({ open: false, subdomain: null, nsAddon: false })
   const [selectedSubdomains, setSelectedSubdomains] = useState<number[]>([])
   const [showBulkActions, setShowBulkActions] = useState(false)
+  const [vercelModal, setVercelModal] = useState<{ open: boolean; subdomain: any }>({ open: false, subdomain: null })
+  const [vercelValue, setVercelValue] = useState('')
+  const [vercelMsg, setVercelMsg] = useState<string | null>(null)
+  const [vercelLoading, setVercelLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth')
@@ -272,14 +276,22 @@ export default function DashboardPage() {
                           {STATUS_MAP[s.status]?.label || s.status}
                         </span>
                         {s.status === 'active' && (
-                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: false })}>
-                            Perpanjang
-                          </Button>
-                        )}
-                        {s.status === 'active' && s.plan === 'paid' && (
-                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: true })}>
-                            Perpanjang + NS
-                          </Button>
+                          <>
+                            <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => setRenewalModal({ open: true, subdomain: s, nsAddon: false })}>
+                              Perpanjang
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              className="!px-3 !py-1 text-xs"
+                              onClick={() => {
+                                setVercelValue('')
+                                setVercelMsg(null)
+                                setVercelModal({ open: true, subdomain: s })
+                              }}
+                            >
+                              Vercel TXT
+                            </Button>
+                          </>
                         )}
                       </div>
                     </Card>
@@ -574,8 +586,7 @@ export default function DashboardPage() {
                     />
                   )}
 
-                  {/* Renewal Modal */}
-      {/* Renewal Modal */}
+      {/* Renewal Modal — paid only (no free renewal) */}
       <Modal
         open={renewalModal.open}
         onClose={() => setRenewalModal({ open: false, subdomain: null, nsAddon: false })}
@@ -584,7 +595,10 @@ export default function DashboardPage() {
         {renewalModal.subdomain && (
           <div className="space-y-4">
             <p className="text-text-secondary dark:text-text-secondary-dark">
-              Pilih paket perpanjangan untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>
+              Perpanjangan berbayar untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>
+              {renewalModal.subdomain.plan === 'free' && (
+                <span className="block mt-1 text-xs">Plan free → upgrade ke paid saat bayar.</span>
+              )}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Button
@@ -595,27 +609,87 @@ export default function DashboardPage() {
                     body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
                   })
                   const data = await res.json()
-                  if (data.checkout_url) window.location.href = data.checkout_url
+                  if (data.checkout_url || data.qr_url) window.location.href = data.checkout_url || data.qr_url
                 }}
               >
                 Base (Rp5.000/tahun)
               </Button>
-              {renewalModal.subdomain.plan === 'paid' && (
-                <Button
-                  onClick={async () => {
-                    const res = await csrfFetch('/api/payment/create', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
-                    })
-                    const data = await res.json()
-                    if (data.checkout_url) window.location.href = data.checkout_url
-                  }}
-                >
-                  Base + NS (Rp6.000/tahun)
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  const res = await csrfFetch('/api/payment/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
+                  })
+                  const data = await res.json()
+                  if (data.checkout_url || data.qr_url) window.location.href = data.checkout_url || data.qr_url
+                }}
+              >
+                Base + NS (Rp6.000/tahun)
+              </Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Vercel parent-zone TXT — is-a.dev style, no manual CF */}
+      <Modal
+        open={vercelModal.open}
+        onClose={() => setVercelModal({ open: false, subdomain: null })}
+        title="Vercel domain verify"
+      >
+        {vercelModal.subdomain && (
+          <div className="space-y-3">
+            <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
+              Vercel minta TXT di <code className="text-xs">_vercel.tepi.my.id</code> (bukan di subdomain).
+              Paste <strong>Value</strong> dari Vercel → TEPI create otomatis.
+            </p>
+            <p className="text-xs text-text-muted">
+              Subdomain: <strong>{vercelModal.subdomain.name}.tepi.my.id</strong>
+            </p>
+            <label className="block text-sm font-medium">Value dari Vercel</label>
+            <input
+              className={inputCls}
+              placeholder="vc-domain-verify=nama.tepi.my.id,abc123..."
+              value={vercelValue}
+              onChange={(e) => setVercelValue(e.target.value)}
+            />
+            {vercelMsg && (
+              <p className={`text-sm ${vercelMsg.startsWith('OK') || vercelMsg.includes('dibuat') || vercelMsg.includes('sudah ada') ? 'text-green-600' : 'text-red-500'}`}>
+                {vercelMsg}
+              </p>
+            )}
+            <Button
+              className="w-full"
+              disabled={vercelLoading || !vercelValue.trim()}
+              onClick={async () => {
+                setVercelLoading(true)
+                setVercelMsg(null)
+                try {
+                  const res = await csrfFetch('/api/user/vercel-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      subdomain_id: vercelModal.subdomain.id,
+                      value: vercelValue.trim(),
+                    }),
+                  })
+                  const d = await res.json()
+                  if (!res.ok) {
+                    setVercelMsg(d.error || 'Gagal')
+                  } else {
+                    setVercelMsg(d.message || 'OK — TXT dibuat. Refresh di Vercel.')
+                  }
+                } catch {
+                  setVercelMsg('Network error')
+                } finally {
+                  setVercelLoading(false)
+                }
+              }}
+            >
+              {vercelLoading ? 'Menyimpan…' : 'Create TXT di _vercel'}
+            </Button>
           </div>
         )}
       </Modal>
