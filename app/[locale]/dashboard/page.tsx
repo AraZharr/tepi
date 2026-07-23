@@ -66,18 +66,27 @@ export default function DashboardPage() {
   const [showBulkActions, setShowBulkActions] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth').then(r => r.json()).then((d: any) => {
-      if (!d.user) { router.push('/login'); return }
-      setUser(d.user)
-      fetchData()
-    })
+    fetch('/api/auth')
+      .then(r => r.json())
+      .then((d: any) => {
+        if (!d.user) { router.push('/login'); return }
+        setUser(d.user)
+        fetchData()
+      })
+      .catch(() => {
+        // Session check failed, redirect to login
+        router.push('/login')
+      })
   }, [])
 
   async function fetchData() {
     try {
       const res = await fetch('/api/user/subdomains')
       const d: any = await res.json()
-      setData(d)
+      // Defensive: Only update if valid response structure
+      if (d && Array.isArray(d.applications) && Array.isArray(d.subdomains)) {
+        setData(d)
+      }
     } catch { /* ignore */ }
     setLoading(false)
   }
