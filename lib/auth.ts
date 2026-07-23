@@ -93,10 +93,11 @@ export async function verifySessionToken(token: string): Promise<{ userId: strin
 export function sessionCookieOptions(maxAge = SESSION_TTL_SEC) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always secure (HTTPS only)
     sameSite: 'lax' as const,
     path: '/',
     maxAge,
+    domain: process.env.NODE_ENV === 'production' ? 'tepi.my.id' : undefined,
   }
 }
 
