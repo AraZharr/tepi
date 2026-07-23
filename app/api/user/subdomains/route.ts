@@ -135,8 +135,8 @@ export async function POST(req: Request) {
   try {
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', 'pending')`
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, target_url, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
     ).bind(
       user.id,
       subdomain_name.toLowerCase().trim(),
@@ -150,6 +150,7 @@ export async function POST(req: Request) {
       social_link || null,
       dns_records[0].type.toUpperCase(),
       dns_records[0].value.trim(),
+      dns_records[0].value.trim(),
     ).run()
     console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
   } catch (err: any) {
@@ -158,8 +159,8 @@ export async function POST(req: Request) {
     const firstRecord = dns_records[0]
     await db.prepare(
       `INSERT INTO subdomain_applications (user_id, subdomain_name, record_type, record_value, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, target_platform, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', 'pending')`
+        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, target_platform, target_url, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
     ).bind(
       user.id,
       subdomain_name.toLowerCase().trim(),
@@ -172,6 +173,7 @@ export async function POST(req: Request) {
       github_link || null,
       linkedin_link || null,
       social_link || null,
+      firstRecord.value.trim(),
     ).run()
     console.log('[Subdomain Submit] Step 7: DB INSERT success (legacy schema)')
   }
