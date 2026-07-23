@@ -7,6 +7,7 @@ import { setCsrfCookie, clearCsrfCookie } from '@/lib/csrf'
 const SESSION_COOKIE = 'tepi_session'
 const OTP_TTL_MS = 10 * 60 * 1000
 const SESSION_TTL_SEC = 60 * 60 * 24 * 30
+const RESET_TTL_MS = 60 * 60 * 1000 // 1 hour
 
 export type AuthUser = {
   id: string
@@ -102,7 +103,6 @@ export function sessionCookieOptions(maxAge = SESSION_TTL_SEC) {
 export async function setSessionCookie(res: NextResponse, userId: string) {
   const token = await createSessionToken(userId)
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions())
-  // Rotate CSRF on login — binds session to a fresh double-submit token
   setCsrfCookie(res)
   return token
 }
@@ -224,4 +224,83 @@ export async function findUserByIdentifier(identifier: string) {
       email_verified: number
       is_suspended: number
     }>()
+}
+
+function resetToken() {
+  return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+}
+
+export async function issuePasswordReset(email: string) {
+  const db = await getDB()
+  
+  // Find user by email
+  const user = await db
+    .prepare(`SELECT id, email FROM users WHERE email = ? AND is_suspended = 0`)
+    .bind(email)
+    .first<{ id: string; email: string }>()
+  
+  if (!user) {
+    // Don't reveal if email exists - return success anyway
+    return { ok: true as const }
+  }
+
+  const token = resetToken()
+  const tokenHash = await hmac(`${email}:reset:${token}`)
+  const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString()
+
+  await db.prepare(`DELETE FROM password_resets WHERE email = ?`).bind(email).run()
+  await db
+    .prepare(
+      `INSERT INTO password_resets (user_id, email, token_hash, expires_at, used)
+       VALUES (?, ?, ?, ?, 0)`
+    )
+    .bind(user.id, email, tokenHash, expiresAt)
+    .run()
+
+  await sendEmail({
+    to: email,
+    subject: 'Reset password tepi.my.id',
+    html: `
+      <p>Kamu meminta reset password. Klik link di bawah:</p>
+      <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tepi.my.id'}/reset-password?token=${token}&email=${encodeURIComponent(email)}" 
+            style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-weight:600">
+        Reset Password
+      </a></p>
+      <p>Link berlaku 1 jam. Jika bukan kamu, abaikan email ini.</p>
+    `,
+  }).catch(() => {
+    console.warn(`[auth] Send reset email failed for ${email}`)
+  })
+
+  return { ok: true as const }
+}
+
+export async function consumePasswordReset(email: string, token: string, newPassword: string) {
+  const db = await getDB()
+  
+  const row = await db
+    .prepare(
+      `SELECT id, user_id, token_hash, expires_at, used FROM password_resets
+       WHERE email = ? ORDER BY id DESC LIMIT 1`
+    )
+    .bind(email)
+    .first<{ id: number; user_id: string; token_hash: string; expires_at: string; used: number }>()
+
+  if (!row) return { ok: false as const, error: 'Token tidak valid atau kedaluwarsa' }
+  if (row.used) return { ok: false as const, error: 'Token sudah digunakan' }
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    return { ok: false as const, error: 'Token kedaluwarsa. Minta reset baru.' }
+  }
+
+  const expected = await hmac(`${email}:reset:${token}`)
+  if (expected !== row.token_hash) {
+    return { ok: false as const, error: 'Token tidak valid' }
+  }
+
+  const passwordHash = await hashPassword(newPassword)
+  
+  await db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).bind(passwordHash, row.user_id).run()
+  await db.prepare(`UPDATE password_resets SET used = 1 WHERE id = ?`).bind(row.id).run()
+
+  return { ok: true as const }
 }

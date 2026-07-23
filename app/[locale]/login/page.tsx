@@ -166,6 +166,9 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-text-muted">
           Belum punya akun? <Link href="/register" className="text-blue hover:underline">Daftar</Link>
         </p>
+        <p className="mt-2 text-center text-sm">
+          <Link href="/forgot-password" className="text-blue hover:underline">Lupa password?</Link>
+        </p>
       </div>
     </main>
   )

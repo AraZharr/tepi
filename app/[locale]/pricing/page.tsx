@@ -2,12 +2,16 @@ import Link from 'next/link'
 import { setRequestLocale } from 'next-intl/server'
 import SiteNav from '@/components/SiteNav'
 
+const BASE_PRICE = 5000
+const NS_ADDON_PRICE = 1000
+const TOTAL_PRICE = BASE_PRICE + NS_ADDON_PRICE
+
 export const metadata = {
   title: 'Harga | tepi.my.id',
-  description: 'Free subdomain .tepi.my.id — gratis 3 bulan. Upgrade Rp5.000/tahun untuk domain unlimited, bebas iklan, dan prioritas.',
+  description: 'Free subdomain .tepi.my.id — gratis 3 bulan. Upgrade Rp5.000/tahun untuk domain unlimited, bebas iklan, dan prioritas. Add-on NS: +Rp1.000.',
   openGraph: {
     title: 'Harga | tepi.my.id',
-    description: 'Free subdomain .tepi.my.id — gratis 3 bulan. Upgrade Rp5.000/tahun.',
+    description: 'Free subdomain .tepi.my.id — gratis 3 bulan. Upgrade Rp5.000/tahun. Add-on NS: +Rp1.000.',
   },
 }
 
@@ -18,35 +22,30 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
   const tiers = [
     {
       name: 'Free',
-      price: 'Rp0',
-      period: '3 bulan',
-      desc: 'Coba dulu — gratis',
+      price: 0,
+      period: '/ 3 bulan',
       features: [
-        '1 subdomain .tepi.my.id',
+        '2 subdomain',
         'Masa aktif 3 bulan',
-        'Cloudflare CDN + SSL',
-        'Auto DNS record',
-        'Renewal otomatis (klik tombol)',
-        'Iklan Adsterra',
-        'Support via WA/Email',
+        'Auto renewal (cek pointing)',
+        'Cloudflare CDN & Auto DNS',
+        'Support WA / Email',
       ],
       cta: 'Daftar Gratis',
       href: '/register',
-      featured: false,
     },
     {
       name: 'Paid',
-      price: 'Rp5.000',
-      period: 'per tahun',
-      desc: 'Untuk yang serius',
+      price: BASE_PRICE,
+      period: '/ tahun',
       features: [
-        'Hingga 5 subdomain',
+        '5 subdomain',
         'Masa aktif 1 tahun',
-        'Cloudflare CDN + SSL',
-        'Auto DNS record',
-        'QRIS auto-renewal',
-        '✅ BEBAS IKLAN',
-        'Support prioritas',
+        'Renewal QRIS',
+        '❌ Bebas Iklan Adsterra',
+        'Cloudflare CDN & Auto DNS',
+        'Support Prioritas WA / Email',
+        'Add-on NS Record: +Rp1.000',
       ],
       cta: 'Upgrade Sekarang',
       href: '/register',
@@ -73,28 +72,38 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
               }`}
             >
               {tier.featured && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue px-4 py-0.5 text-xs font-semibold text-white">POPULER</div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue px-4 py-0.5 text-xs font-semibold text-white">
+                  POPULER
+                </div>
               )}
-              <h2 className="font-heading text-2xl font-extrabold text-text-primary dark:text-text-primary-dark">{tier.name}</h2>
-              <div className="mt-2">
-                <span className="text-3xl font-extrabold text-text-primary dark:text-text-primary-dark">{tier.price}</span>
-                <span className="text-sm text-text-muted"> /{tier.period}</span>
+              <h2 className="font-heading text-2xl font-extrabold text-text-primary dark:text-text-primary-dark">
+                {tier.name}
+              </h2>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-text-primary dark:text-text-primary-dark">
+                  Rp{tier.price.toLocaleString()}
+                </span>
+                <span className="text-text-secondary dark:text-text-secondary-dark">{tier.period}</span>
               </div>
-              <p className="mt-1 text-sm text-text-secondary">{tier.desc}</p>
-              <ul className="mt-6 space-y-2.5 text-sm">
-                {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-text-primary dark:text-text-primary-dark">
-                    <span className="mt-0.5 shrink-0">{f.includes('BEBAS') || f.startsWith('Hingga') ? '✅' : '✓'}</span>
-                    {f}
+              {tier.featured && (
+                <p className="mt-1 text-xs text-blue dark:text-blue-light">
+                  Base: Rp{BASE_PRICE.toLocaleString()} + NS Add-on: Rp{NS_ADDON_PRICE.toLocaleString()} = Rp{TOTAL_PRICE.toLocaleString()}
+                </p>
+              )}
+              <ul className="mt-6 space-y-3">
+                {tier.features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-text-secondary dark:text-text-secondary-dark">
+                    <span className="flex-shrink-0 mt-0.5 text-blue">✓</span>
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href={tier.href}
-                className={`mt-6 block w-full rounded-md py-3 text-center text-sm font-semibold transition ${
+                className={`mt-6 block w-full rounded-lg py-3 text-center font-semibold transition ${
                   tier.featured
-                    ? 'bg-blue text-white hover:bg-blue-hover'
-                    : 'border border-border text-text-primary hover:bg-surface dark:border-border-dark dark:text-text-primary-dark dark:hover:bg-surface-dark'
+                    ? 'bg-blue text-white hover:bg-blue/90'
+                    : 'bg-surface text-text-primary border border-border hover:bg-surface/80 dark:bg-surface-dark dark:text-text-primary-dark dark:border-border-dark'
                 }`}
               >
                 {tier.cta}
@@ -124,6 +133,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
                   ['Cloudflare CDN', '✅', '✅'],
                   ['Auto DNS', '✅', '✅'],
                   ['Support', 'WA / Email', 'Prioritas'],
+                  ['NS Add-on (4 records)', '❌', `+Rp${NS_ADDON_PRICE.toLocaleString()}`],
                 ].map(([feature, free, paid]) => (
                   <tr key={feature}>
                     <td className="py-3 pr-6 font-medium text-text-primary">{feature}</td>

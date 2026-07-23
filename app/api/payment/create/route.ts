@@ -23,9 +23,9 @@ export async function GET(req: Request) {
   const invoiceNumber = generateInvoiceNumber()
 
   await db.prepare(
-    `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status)
-     VALUES (?, ?, ?, ?, 5000, 'pending')`
-  ).bind(user.id, subdomainId, orderId, invoiceNumber).run()
+    `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, ns_addon)
+     VALUES (?, ?, ?, ?, ?, 'pending', ?)`
+  ).bind(user.id, subdomainId, orderId, invoiceNumber, amount, ns_addon ? 1 : 0).run()
 
   try {
     const result = await createSubdomainRenewalOrder({

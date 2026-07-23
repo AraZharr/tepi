@@ -64,9 +64,9 @@ export default function AdminUsersPage() {
   const [userMode, setUserMode] = useState<'create' | 'edit' | null>(null)
 
   // subdomain form
-  const [sdForm, setSdForm] = useState({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
-    expires_at: '', target_type: 'CNAME', target_value: '' })
-  const [sdMode, setSdMode] = useState<'create' | 'edit' | null>(null)
+    const [sdForm, setSdForm] = useState({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
+      expires_at: '', dns_records: [{ type: 'CNAME', value: '' }] })
+    const [sdMode, setSdMode] = useState<'create' | 'edit' | null>(null)
 
   // application form
   const [appForm, setAppForm] = useState({ id: '', user_id: '', subdomain_name: '',
@@ -127,25 +127,40 @@ export default function AdminUsersPage() {
   // ===== SUBDOMAINS =====
   function startCreateSubdomain() {
     setSdForm({ id: '', user_id: '', name: '', status: 'active', plan: 'free',
-      expires_at: '', target_type: 'CNAME', target_value: '' })
+      expires_at: '', dns_records: [{ type: 'CNAME', value: '' }] })
     setSdMode('create')
   }
   function startEditSubdomain(s: Subdomain) {
+    const records = s.target_type && s.target_value
+      ? [{ type: s.target_type, value: s.target_value }]
+      : [{ type: 'CNAME', value: '' }]
     setSdForm({
       id: s.id, user_id: s.user_id, name: s.name, status: s.status, plan: s.plan,
       expires_at: s.expires_at ? String(s.expires_at).slice(0, 10) : '',
-      target_type: s.target_type || 'CNAME', target_value: s.target_value || '',
+      dns_records: records,
     })
     setSdMode('edit')
   }
   async function saveSubdomain() {
     if (!sdForm.name || !sdForm.user_id) return alert('Nama subdomain & user_id wajib')
+    // Validate DNS records
+    const validRecords = sdForm.dns_records.filter(r => r.type && r.value.trim())
+    if (validRecords.length === 0) return alert('Minimal 1 DNS record harus diisi')
+    if (validRecords.length > 4) return alert('Maksimal 4 DNS records')
+
     setBusy(true)
     const isCreate = sdMode === 'create'
     const res = await csrfFetch('/api/admin/users', {
       method: isCreate ? 'POST' : 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resource: 'subdomain', ...sdForm }),
+      body: JSON.stringify({ 
+        resource: 'subdomain', 
+        ...sdForm, 
+        dns_records: JSON.stringify(validRecords),
+        // Backward compat
+        target_type: validRecords[0]?.type || 'CNAME',
+        target_value: validRecords[0]?.value || '',
+      }),
     })
     const j = await res.json()
     setBusy(false)
@@ -369,15 +384,43 @@ export default function AdminUsersPage() {
                 </div>
                 <input type="date" className={inputCls} placeholder="Expires" value={sdForm.expires_at}
                   onChange={e => setSdForm(f => ({ ...f, expires_at: e.target.value }))} />
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <select className={inputCls} value={sdForm.target_type}
-                    onChange={e => setSdForm(f => ({ ...f, target_type: e.target.value }))}>
-                    <option value="CNAME">CNAME</option>
-                    <option value="A">A</option>
-                    <option value="TXT">TXT</option>
-                  </select>
-                  <input className={inputCls} placeholder="Target value" value={sdForm.target_value}
-                    onChange={e => setSdForm(f => ({ ...f, target_value: e.target.value }))} />
+                {/* DNS Records - Multiple */}
+                <div className="border-t border-border pt-2 mt-2">
+                  <p className="text-xs font-semibold text-text-secondary mb-2">DNS Records</p>
+                  {sdForm.dns_records.map((rec, idx) => (
+                    <div key={idx} className="flex gap-2 mb-2 items-center">
+                      <select className={inputCls} style={{width: '90px'}} value={rec.type}
+                        onChange={e => {
+                          const updated = [...sdForm.dns_records]
+                          updated[idx] = { ...updated[idx], type: e.target.value }
+                          setSdForm(f => ({ ...f, dns_records: updated }))
+                        }}>
+                        <option value="CNAME">CNAME</option>
+                        <option value="A">A</option>
+                        <option value="TXT">TXT</option>
+                      </select>
+                      <input className={inputCls} flex placeholder={rec.type === 'CNAME' ? 'contoh.vercel.app' : rec.type === 'A' ? '1.2.3.4' : 'value'}
+                        value={rec.value}
+                        onChange={e => {
+                          const updated = [...sdForm.dns_records]
+                          updated[idx] = { ...updated[idx], value: e.target.value }
+                          setSdForm(f => ({ ...f, dns_records: updated }))
+                        }} />
+                      {sdForm.dns_records.length > 1 && (
+                        <Button variant="secondary" className="!px-2 !py-1.5 text-xs h-8" 
+                          onClick={() => {
+                            const updated = sdForm.dns_records.filter((_, i) => i !== idx)
+                            setSdForm(f => ({ ...f, dns_records: updated }))
+                          }}>
+                          Hapus
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button variant="secondary" className="!px-2 !py-1.5 text-xs" 
+                    onClick={() => setSdForm(f => ({ ...f, dns_records: [...f.dns_records, { type: 'CNAME', value: '' }] }))}>
+                    + Tambah Record
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button className="!px-3 !py-1.5 text-xs" disabled={busy} onClick={saveSubdomain}>
@@ -397,7 +440,7 @@ export default function AdminUsersPage() {
                 <Card key={s.id} hover={false} className="grid gap-1 p-4 text-sm">
                   <p className="font-semibold break-all">{s.name}.tepi.my.id</p>
                   <p className="text-text-secondary">
-                    {s.target_type} → {s.target_value || '-'}
+                    {s.target_type && s.target_value ? `${s.target_type} → ${s.target_value}` : 'Belum dikonfigurasi'}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <StatusBadge status={s.status} />
