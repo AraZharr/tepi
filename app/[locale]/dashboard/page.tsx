@@ -69,6 +69,9 @@ export default function DashboardPage() {
   const [vercelValue, setVercelValue] = useState('')
   const [vercelMsg, setVercelMsg] = useState<string | null>(null)
   const [vercelLoading, setVercelLoading] = useState(false)
+  const [renewToken, setRenewToken] = useState('')
+  const [renewMsg, setRenewMsg] = useState<string | null>(null)
+  const [renewLoading, setRenewLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth')
@@ -586,49 +589,129 @@ export default function DashboardPage() {
                     />
                   )}
 
-      {/* Renewal Modal — paid only (no free renewal) */}
+      {/* Renewal: free 3 bulan ATAU berbayar 1 tahun */}
       <Modal
         open={renewalModal.open}
-        onClose={() => setRenewalModal({ open: false, subdomain: null, nsAddon: false })}
+        onClose={() => {
+          setRenewalModal({ open: false, subdomain: null, nsAddon: false })
+          setRenewToken('')
+          setRenewMsg(null)
+        }}
         title={"Perpanjang " + (renewalModal.subdomain ? renewalModal.subdomain.name + '.tepi.my.id' : '')}
       >
         {renewalModal.subdomain && (
           <div className="space-y-4">
-            <p className="text-text-secondary dark:text-text-secondary-dark">
-              Perpanjangan berbayar untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>
-              {renewalModal.subdomain.plan === 'free' && (
-                <span className="block mt-1 text-xs">Plan free → upgrade ke paid saat bayar.</span>
-              )}
+            <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
+              Pilih perpanjangan untuk <strong>{renewalModal.subdomain.name}.tepi.my.id</strong>
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button
-                onClick={async () => {
-                  const res = await csrfFetch('/api/payment/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
-                  })
-                  const data = await res.json()
-                  if (data.checkout_url || data.qr_url) window.location.href = data.checkout_url || data.qr_url
-                }}
-              >
-                Base (Rp5.000/tahun)
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  const res = await csrfFetch('/api/payment/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
-                  })
-                  const data = await res.json()
-                  if (data.checkout_url || data.qr_url) window.location.href = data.checkout_url || data.qr_url
-                }}
-              >
-                Base + NS (Rp6.000/tahun)
-              </Button>
+
+            {/* Free — 3 bulan (plan free only) */}
+            {renewalModal.subdomain.plan !== 'paid' && (
+              <div className="rounded-lg border border-border p-3 dark:border-border-dark space-y-2">
+                <p className="font-semibold text-sm">Gratis — +3 bulan</p>
+                <p className="text-xs text-text-muted">Target harus masih pointing. CAPTCHA wajib.</p>
+                <TurnstileWidget onVerify={setRenewToken} />
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  disabled={renewLoading || !renewToken}
+                  onClick={async () => {
+                    setRenewLoading(true)
+                    setRenewMsg(null)
+                    try {
+                      const res = await csrfFetch('/api/user/renew', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          subdomain_id: renewalModal.subdomain.id,
+                          action: 'renew_free',
+                          turnstile_token: renewToken,
+                        }),
+                      })
+                      const d = await res.json()
+                      if (!res.ok) {
+                        setRenewMsg(d.error || 'Gagal free renew')
+                        setRenewToken('')
+                      } else {
+                        setRenewMsg(d.message || 'Diperpanjang 3 bulan')
+                        fetchData()
+                      }
+                    } catch {
+                      setRenewMsg('Network error')
+                    } finally {
+                      setRenewLoading(false)
+                    }
+                  }}
+                >
+                  {renewLoading ? 'Memproses…' : 'Perpanjang gratis 3 bulan'}
+                </Button>
+              </div>
+            )}
+
+            {/* Paid — switch / renew berbayar */}
+            <div className="rounded-lg border border-border p-3 dark:border-border-dark space-y-2">
+              <p className="font-semibold text-sm">Berbayar — 1 tahun</p>
+              <p className="text-xs text-text-muted">
+                {renewalModal.subdomain.plan === 'free'
+                  ? 'Beralih ke plan paid.'
+                  : 'Perpanjang plan paid.'}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  disabled={renewLoading}
+                  onClick={async () => {
+                    setRenewLoading(true)
+                    setRenewMsg(null)
+                    try {
+                      const res = await csrfFetch('/api/payment/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
+                      })
+                      const d = await res.json()
+                      if (d.checkout_url || d.qr_url) window.location.href = d.checkout_url || d.qr_url
+                      else setRenewMsg(d.error || 'Gagal buat pembayaran')
+                    } catch {
+                      setRenewMsg('Network error')
+                    } finally {
+                      setRenewLoading(false)
+                    }
+                  }}
+                >
+                  Base Rp5.000/th
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={renewLoading}
+                  onClick={async () => {
+                    setRenewLoading(true)
+                    setRenewMsg(null)
+                    try {
+                      const res = await csrfFetch('/api/payment/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
+                      })
+                      const d = await res.json()
+                      if (d.checkout_url || d.qr_url) window.location.href = d.checkout_url || d.qr_url
+                      else setRenewMsg(d.error || 'Gagal buat pembayaran')
+                    } catch {
+                      setRenewMsg('Network error')
+                    } finally {
+                      setRenewLoading(false)
+                    }
+                  }}
+                >
+                  Base+NS Rp6.000/th
+                </Button>
+              </div>
             </div>
+
+            {renewMsg && (
+              <p className={`text-sm ${renewMsg.includes('Gagal') || renewMsg.includes('error') || renewMsg.includes('tidak') ? 'text-red-500' : 'text-green-600'}`}>
+                {renewMsg}
+              </p>
+            )}
           </div>
         )}
       </Modal>

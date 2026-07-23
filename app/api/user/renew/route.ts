@@ -53,20 +53,29 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // Extend 3 months
-    const newExpiry = new Date()
-    newExpiry.setDate(newExpiry.getDate() + 90)
-    const expiresAt = newExpiry.toISOString().replace('T', ' ').replace(/\..*/, '')
+    // Free plan only — paid plan must use payment
+    if ((subdomain.plan as string) === 'paid') {
+      return NextResponse.json({
+        error: 'Plan berbayar tidak bisa free renew. Pilih paket berbayar.',
+      }, { status: 400 })
+    }
+
+    // Extend 3 months from later of now or current expiry
+    const base = subdomain.expires_at
+      ? new Date(String(subdomain.expires_at).includes('T') ? String(subdomain.expires_at) : String(subdomain.expires_at) + 'Z')
+      : new Date()
+    const from = base.getTime() > Date.now() ? base : new Date()
+    from.setDate(from.getDate() + 90)
+    const expiresAt = from.toISOString().replace('T', ' ').replace(/\..*/, '')
 
     await db.prepare(
-      'UPDATE subdomains SET expires_at = ?, status = ? WHERE id = ?'
-    ).bind(expiresAt, 'active', subdomain_id).run()
+      'UPDATE subdomains SET expires_at = ?, status = ?, plan = ? WHERE id = ?'
+    ).bind(expiresAt, 'active', 'free', subdomain_id).run()
 
-    return NextResponse.json({ success: true, expires_at: expiresAt, message: '✅ Subdomain diperpanjang 3 bulan!' })
+    return NextResponse.json({ success: true, expires_at: expiresAt, message: 'Subdomain diperpanjang 3 bulan (gratis).' })
   }
 
   if (action === 'upgrade_paid') {
-    // Generate Paywuz order
     return NextResponse.json({
       success: true,
       redirect_url: `/api/payment/create?subdomain_id=${subdomain_id}`,
