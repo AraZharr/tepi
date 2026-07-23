@@ -37,7 +37,8 @@ ${action ? `<a href="${action.url}" style="display:inline-block;margin-top:20px;
 
 /** Kirim notif ke admin via Resend */
 export async function adminNotif(subject: string, html: string) {
-  const to = process.env.ADMIN_NOTIF_EMAIL || process.env.NEXT_PUBLIC_EMAIL_ADDR || 'rizalrahmadi13@gmail.com'
+  // ADMIN_NOTIF_EMAIL = inbox admin (Gmail). FROM tetap noreply@tepi.my.id (Resend)
+  const to = process.env.ADMIN_NOTIF_EMAIL || 'azharserver36@gmail.com'
   const { sendEmail } = await import('./email')
   return sendEmail({ to, subject, html }).catch(() => null)
 }
