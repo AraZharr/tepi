@@ -21,6 +21,8 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
   suspended: { label: 'Ditangguhkan', class: 'bg-gray-50 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300' },
 }
 
+import { safeJsonParse } from '@/lib/safe-json'
+
 export default function DomainsPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -160,7 +162,7 @@ export default function DomainsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                    Records: {a.dns_records ? JSON.parse(a.dns_records).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
+                    Records: {a.dns_records ? (safeJsonParse(a.dns_records) || []).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
                   </p>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
                     {a.project_description}
@@ -193,7 +195,7 @@ export default function DomainsPage() {
                     </span>
                   </div>
                   <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                    Records: {a.dns_records ? JSON.parse(a.dns_records).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
+                    Records: {a.dns_records ? (safeJsonParse(a.dns_records) || []).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
                   </p>
                   {a.reject_reason && (
                     <p className="mt-1 rounded bg-red-50 p-2 text-sm text-red dark:bg-red-900/20">

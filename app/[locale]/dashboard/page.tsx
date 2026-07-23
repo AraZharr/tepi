@@ -35,6 +35,8 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
 const inputCls =
   'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-blue focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark'
 
+import { safeJsonParse } from '@/lib/safe-json'
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -231,7 +233,7 @@ export default function DashboardPage() {
                       {a.subdomain_name}.tepi.my.id
                     </p>
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                      {a.dns_records ? JSON.parse(a.dns_records).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
+                      {a.dns_records ? (safeJsonParse(a.dns_records) || []).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${a.record_type} → ${a.record_value}`}
                     </p>
                     {a.status === 'rejected' && a.reject_reason && (
                       <p className="mt-1 text-sm text-red">Alasan: {a.reject_reason}</p>

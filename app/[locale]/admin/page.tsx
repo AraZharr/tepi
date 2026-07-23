@@ -19,7 +19,9 @@ const ADMIN_SECTIONS = [
   { href: '/admin/settings', label: 'Settings', desc: 'Konfigurasi situs & kontak', icon: '⚙️', color: 'border-l-gray' },
 ]
 
-export default function AdminPage() {
+import { safeJsonParse } from '@/lib/safe-json'
+
+export default function AdminPanel() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [applications, setApplications] = useState<any[]>([])
@@ -121,7 +123,7 @@ export default function AdminPage() {
                   <div className="mt-2 grid gap-x-6 gap-y-1 text-sm md:grid-cols-2">
                     <p className="text-text-secondary">Pemohon: <span className="text-text-primary">{app.full_name || app.email}</span></p>
                     <p className="text-text-secondary">Records: <span className="text-text-primary">
-                      {app.dns_records ? JSON.parse(app.dns_records).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${app.record_type} → ${app.record_value}`}
+                      {app.dns_records ? (safeJsonParse(app.dns_records) || []).map((r: any) => `${r.type} → ${r.value}`).join(', ') : `${app.record_type} → ${app.record_value}`}
                     </span></p>
                   </div>
                   <p className="mt-3 text-sm text-text-secondary border-t border-border pt-3">{app.project_description}</p>

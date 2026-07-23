@@ -4,6 +4,7 @@ import { getDB } from '@/lib/db'
 import { createDNSRecord } from '@/lib/cloudflare-dns'
 import { sendEmail, emailApplicationApproved, emailApplicationRejected } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
+import { safeJsonParse } from '@/lib/safe-json'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   let user
@@ -61,7 +62,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // Approve — create DNS records + subdomain
   const recordName = `${app.subdomain_name as string}.tepi.my.id`
-  const dnsRecords = app.dns_records ? JSON.parse(app.dns_records as string) : 
+  const dnsRecords = app.dns_records ? (safeJsonParse(app.dns_records as string) || [{ type: app.record_type || 'CNAME', value: app.record_value || '' }]) : 
     [{ type: app.record_type || 'CNAME', value: app.record_value || '' }] // Backward compat
 
   const createdRecords: any[] = []
