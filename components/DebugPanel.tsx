@@ -63,12 +63,23 @@ export default function DebugPanel() {
               ))}
             </div>
           )}
-          <button
-            onClick={() => setLogs([])}
-            className="mt-3 w-full rounded bg-red/20 py-1 text-red hover:bg-red/30 text-xs"
-          >
-            Clear
-          </button>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => {
+                const text = logs.map(l => `${l.time} ${l.msg.map(m => typeof m === 'object' ? JSON.stringify(m) : String(m)).join(' ')}`).join('\n')
+                navigator.clipboard.writeText(text)
+              }}
+              className="flex-1 rounded bg-blue/20 py-1 text-blue hover:bg-blue/30 text-xs"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => setLogs([])}
+              className="flex-1 rounded bg-red/20 py-1 text-red hover:bg-red/30 text-xs"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       )}
     </div>
