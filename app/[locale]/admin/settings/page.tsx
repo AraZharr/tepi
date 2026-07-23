@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { csrfFetch } from '@/lib/csrf-client'
 
+import { safeJsonParse } from '@/lib/safe-json'
+
 export default function AdminSettingsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<Record<string, string>>({})
@@ -152,9 +154,9 @@ export default function AdminSettingsPage() {
               {settings.email_dns_records && (
                 <div className="mt-2 rounded border border-border bg-surface p-3 text-xs dark:border-border-dark dark:bg-surface-dark">
                   <p className="font-semibold mb-1">TXT DNS records:</p>
-                  <pre className="whitespace-pre-wrap overflow-auto">{(JSON.parse(settings.email_dns_records) as any).txt || ''}</pre>
+                  <pre className="whitespace-pre-wrap overflow-auto">{((safeJsonParse(settings.email_dns_records) as any) || {}).txt || ''}</pre>
                   <p className="font-semibold mt-2 mb-1">CNAME DNS records:</p>
-                  <pre className="whitespace-pre-wrap overflow-auto">{(JSON.parse(settings.email_dns_records) as any).cname || ''}</pre>
+                  <pre className="whitespace-pre-wrap overflow-auto">{((safeJsonParse(settings.email_dns_records) as any) || {}).cname || ''}</pre>
                 </div>
               )}
             </div>
