@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react'
 
 export default function DebugPanel() {
+  // Hidden in production - only show in development
+  if (process.env.NODE_ENV === 'production') {
+    return null
+  }
+
   const [logs, setLogs] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
