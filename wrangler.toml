@@ -14,3 +14,6 @@ database_id = "ba5ea207-393f-478b-9f69-9a3f2568e03c"
 
 [triggers]
 crons = ["0 2 * * *"]
+
+[vars]
+NEXT_PUBLIC_APP_URL = "https://tepi.my.id"
