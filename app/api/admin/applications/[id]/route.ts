@@ -69,6 +69,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const nsRecords = app.ns_records ? (safeJsonParse(app.ns_records as string) || []) : []
 
   const createdRecords: any[] = []
+  const nsRecordIds: string[] = []
 
   // Create all DNS records (CNAME, A, TXT)
   for (const rec of dnsRecords) {
@@ -119,6 +120,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
 
       createdRecords.push({ type: 'NS', value: ns, cf_record_id: dnsResult.result?.id })
+      nsRecordIds.push(dnsResult.result?.id as string)
     }
   }
 
@@ -137,8 +139,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const isAdminClaim = (app.role as string) === 'admin'
 
   await db.prepare(
-    `INSERT INTO subdomains (user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at, ns_addon)
-     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)`
+    `INSERT INTO subdomains (user_id, name, target_type, target_value, cf_record_id, status, plan, expires_at, ns_addon, ns_record_ids, auto_renew)
+     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`
   ).bind(
     app.user_id,
     app.subdomain_name,
@@ -147,7 +149,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     primaryRecord.cf_record_id ?? null,
     isPaid ? 'paid' : 'free',
     isAdminClaim ? null : expiresAt,
-    app.ns_addon ? 1 : 0
+    app.ns_addon ? 1 : 0,
+    nsRecordIds.length > 0 ? JSON.stringify(nsRecordIds) : null,
+    isPaid ? 1 : 0 // auto_renew default ON for paid
   ).run()
 
   // Log activity
