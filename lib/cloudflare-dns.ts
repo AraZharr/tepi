@@ -43,7 +43,7 @@ export async function createDNSRecord(
         type: record.type,
         name: record.name,
         content: record.content,
-        proxied: record.type === 'TXT' ? false : (record.proxied ?? true),  // TXT gak bisa diproxy
+        proxied: ['TXT', 'CNAME'].includes(record.type) ? false : (record.proxied ?? true),  // TXT & CNAME gak bisa diproxy
         ttl: record.ttl ?? 1,            // 1 = automatic TTL
       }),
     }

@@ -133,25 +133,26 @@ export async function POST(req: Request) {
   // Fallback to record_type/record_value if column doesn't exist (old schema)
   console.log('[Subdomain Submit] Step 7: Inserting to DB', { subdomain_name, dns_records_count: dns_records.length })
   try {
-    await db.prepare(
-      `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
-        project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, target_url, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
-    ).bind(
-      user.id,
-      subdomain_name.toLowerCase().trim(),
-      JSON.stringify(dns_records),
-      project_type,
-      project_description,
-      is_public ? 1 : 0,
-      has_monetization ? 1 : 0,
-      github_link || null,
-      linkedin_link || null,
-      social_link || null,
-      dns_records[0].type.toUpperCase(),
-      dns_records[0].value.trim(),
-      dns_records[0].value.trim(),
-    ).run()
+      await db.prepare(
+        `INSERT INTO subdomain_applications (user_id, subdomain_name, dns_records, project_type,
+          project_description, is_public, has_monetization, github_link, linkedin_link, social_link, record_type, record_value, target_platform, target_url, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'custom', ?, 'pending')`
+      ).bind(
+        user.id,
+        subdomain_name.toLowerCase().trim(),
+        JSON.stringify(dns_records),
+        project_type,
+        project_description,
+        is_public ? 1 : 0,
+        has_monetization ? 1 : 0,
+        github_link || null,
+        linkedin_link || null,
+        social_link || null,
+        dns_records[0].type.toUpperCase(),
+        dns_records[0].value.trim(),
+        dns_records[0].value.trim(),
+      ).run()
+      console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
     console.log('[Subdomain Submit] Step 7: DB INSERT success (new schema)')
   } catch (err: any) {
     // Fallback: use old schema (record_type + record_value) for first record only
