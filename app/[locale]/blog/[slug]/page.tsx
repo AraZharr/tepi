@@ -1,5 +1,6 @@
 import { getDB } from '@/lib/db'
 import { setRequestLocale } from 'next-intl/server'
+import DOMPurify from 'isomorphic-dompurify'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -74,7 +75,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div
           className="mt-8 prose prose-sm md:prose-base dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: post.content as string }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content as string) }}
         />
 
         <div className="mt-12 border-t border-border pt-6 text-center dark:border-border-dark">
