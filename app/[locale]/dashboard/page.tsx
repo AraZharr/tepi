@@ -85,15 +85,35 @@ export default function DashboardPage() {
         router.push('/login')
       })
 
-    // Return from Paywuz redirectUrl
+    // Return from Paywuz redirectUrl — confirm via API (backup webhook)
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
       if (sp.get('payment') === 'success') {
-        setRenewMsg('Pembayaran diterima. Kalau plan belum update, tunggu webhook / refresh 10 detik.')
-        // strip query
+        const order = sp.get('order') || ''
+        setRenewMsg('Mengecek pembayaran…')
         window.history.replaceState({}, '', window.location.pathname)
-        setTimeout(() => fetchData(), 3000)
-        setTimeout(() => fetchData(), 10000)
+        ;(async () => {
+          try {
+            if (order) {
+              const res = await fetch(`/api/payment/confirm?order=${encodeURIComponent(order)}`, {
+                credentials: 'include',
+              })
+              const d = await res.json()
+              if (res.ok && (d.success || d.plan === 'paid')) {
+                setRenewMsg(`Pembayaran OK — plan paid sampai ${d.expires_at || ''}`)
+              } else {
+                setRenewMsg(d.error || 'Pembayaran belum terkonfirmasi. Refresh sebentar lagi.')
+              }
+            } else {
+              setRenewMsg('Pembayaran diterima. Refresh jika plan belum update.')
+            }
+          } catch (e: any) {
+            setRenewMsg('Confirm error: ' + (e?.message || e))
+          }
+          fetchData()
+          setTimeout(() => fetchData(), 3000)
+          setTimeout(() => fetchData(), 10000)
+        })()
       }
     }
   }, [])

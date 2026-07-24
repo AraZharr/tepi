@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { getDB } from '@/lib/db'
 import { getTransactionStatus } from '@/lib/paywuz'
+import { applyPaidPlan } from '@/lib/apply-paid'
 
 /**
- * POST { order_id } — cek status Paywuz + apply paid ke subdomain (manual reconcile).
- * Untuk kasus bayar sukses tapi webhook miss.
+ * POST { order_id } — admin force-apply paid from Paywuz status
+ * POST { subdomain_id, force: true } — admin force paid without Paywuz (manual)
  */
 export async function POST(req: Request) {
   try {
@@ -16,14 +17,32 @@ export async function POST(req: Request) {
 
   let body: any = {}
   try { body = await req.json() } catch { /* empty */ }
+
   const orderId = String(body.order_id || body.orderId || '')
+  const subdomainIdRaw = body.subdomain_id || body.subdomainId
+  const force = !!body.force
+
+  // Manual force by subdomain id (no Paywuz check) — for already-paid stuck free
+  if (force && subdomainIdRaw && !orderId) {
+    const subdomainId = Number(subdomainIdRaw)
+    const fakeOrder = `tepi-${subdomainId}-${Date.now()}`
+    const result = await applyPaidPlan(subdomainId, fakeOrder, { amount: 5000 })
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 404 })
+    return NextResponse.json({ success: true, source: 'force', ...result })
+  }
+
   if (!orderId) return NextResponse.json({ error: 'order_id required' }, { status: 400 })
 
   const match = orderId.match(/^tepi-(\d+)-\d+$/)
   if (!match) return NextResponse.json({ error: 'Invalid order_id' }, { status: 400 })
   const subdomainId = parseInt(match[1], 10)
 
-  const db = await getDB()
+  if (force) {
+    const result = await applyPaidPlan(subdomainId, orderId, { amount: 5000 })
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 404 })
+    return NextResponse.json({ success: true, source: 'force-order', ...result })
+  }
+
   const payStatus = await getTransactionStatus(orderId)
   if (!payStatus.success) {
     return NextResponse.json({ error: payStatus.error, orderId }, { status: 502 })
@@ -37,32 +56,29 @@ export async function POST(req: Request) {
     }, { status: 400 })
   }
 
-  const subdomain = await db.prepare('SELECT * FROM subdomains WHERE id = ?').bind(subdomainId).first() as any
-  if (!subdomain) return NextResponse.json({ error: 'Subdomain not found' }, { status: 404 })
-
-  let baseDate = new Date()
-  if (subdomain.expires_at) {
-    const cur = new Date(String(subdomain.expires_at).replace(' ', 'T') + 'Z')
-    if (!Number.isNaN(cur.getTime()) && cur > baseDate) baseDate = cur
-  }
-  const expiresAt = new Date(baseDate.getTime() + 365 * 86400000)
-    .toISOString().replace('T', ' ').replace(/\..*/, '')
-
-  await db.prepare(
-    `UPDATE subdomains SET plan = 'paid', status = 'active', expires_at = ?, updated_at = datetime('now') WHERE id = ?`
-  ).bind(expiresAt, subdomainId).run()
-
-  try {
-    await db.prepare(
-      `UPDATE payments SET status = 'success', paid_at = datetime('now') WHERE order_id = ?`
-    ).bind(orderId).run()
-  } catch { /* ignore */ }
-
-  return NextResponse.json({
-    success: true,
-    subdomain: subdomain.name,
-    plan: 'paid',
-    expires_at: expiresAt,
-    paywuz: payStatus.data.status,
+  const result = await applyPaidPlan(subdomainId, orderId, {
+    amount: payStatus.data.amount,
+    paidAt: payStatus.data.paidAt,
+    txId: payStatus.data.id,
+    paymentMethod: payStatus.data.paymentMethod,
   })
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 404 })
+
+  return NextResponse.json({ success: true, source: 'paywuz', paywuz: payStatus.data.status, ...result })
+}
+
+/** GET — list recent payments + subdomain plan (debug) */
+export async function GET() {
+  try {
+    await requireAdmin()
+  } catch {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  const db = await getDB()
+  const payments = await db.prepare(
+    `SELECT p.*, s.name as subdomain_name, s.plan, s.expires_at
+     FROM payments p LEFT JOIN subdomains s ON s.id = p.subdomain_id
+     ORDER BY p.id DESC LIMIT 20`
+  ).all()
+  return NextResponse.json({ payments: payments.results || [] })
 }
