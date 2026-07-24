@@ -19,8 +19,10 @@
 const PAYWUZ_API = 'https://api.paywuz.id/v1'
 
 function getHeaders() {
+  const key = process.env.PAYWUZ_API_KEY
+  if (!key) throw new Error('PAYWUZ_API_KEY missing')
   return {
-    Authorization: `Bearer ${process.env.PAYWUZ_API_KEY}`,
+    Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
   }
 }
@@ -59,12 +61,21 @@ export interface Transaction {
 type Result<T> = { success: true; data: T } | { success: false; error: string }
 
 async function parseResponse<T>(res: Response): Promise<Result<T>> {
+  const text = await res.text()
+  let json: any = null
+  try { json = text ? JSON.parse(text) : null } catch { /* not json */ }
+
   if (!res.ok) {
-    const err = (await res.json()) as PaywuzErrorResponse
-    return { success: false, error: `${err.error}: ${err.message}` }
+    const errMsg =
+      (json && (json.message || json.error))
+        ? `${json.error || 'error'}: ${json.message || json.error}`
+        : `HTTP ${res.status}: ${text.slice(0, 200)}`
+    return { success: false, error: errMsg }
   }
-  const { data } = (await res.json()) as { data: T }
-  return { success: true, data }
+  if (!json?.data) {
+    return { success: false, error: 'Paywuz response missing data field' }
+  }
+  return { success: true, data: json.data as T }
 }
 
 // ─── Daftar Metode Pembayaran ──────────────────────────────────────────────

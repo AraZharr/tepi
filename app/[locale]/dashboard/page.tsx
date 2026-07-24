@@ -669,10 +669,15 @@ export default function DashboardPage() {
                         body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
                       })
                       const d = await res.json()
-                      if (d.checkout_url || d.qr_url) window.location.href = d.checkout_url || d.qr_url
-                      else setRenewMsg(d.error || 'Gagal buat pembayaran')
-                    } catch {
-                      setRenewMsg('Network error')
+                      if (d.checkout_url || d.qr_url) {
+                        window.location.href = d.checkout_url || d.qr_url
+                      } else {
+                        const dbg = d.debug ? `\n${JSON.stringify(d.debug)}` : ''
+                        setRenewMsg(`${d.error || 'Gagal buat pembayaran'} (HTTP ${res.status})${dbg}`)
+                        console.error('[renew paid base]', res.status, d)
+                      }
+                    } catch (e: any) {
+                      setRenewMsg('Network error: ' + (e?.message || e))
                     } finally {
                       setRenewLoading(false)
                     }
@@ -693,10 +698,15 @@ export default function DashboardPage() {
                         body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
                       })
                       const d = await res.json()
-                      if (d.checkout_url || d.qr_url) window.location.href = d.checkout_url || d.qr_url
-                      else setRenewMsg(d.error || 'Gagal buat pembayaran')
-                    } catch {
-                      setRenewMsg('Network error')
+                      if (d.checkout_url || d.qr_url) {
+                        window.location.href = d.checkout_url || d.qr_url
+                      } else {
+                        const dbg = d.debug ? `\n${JSON.stringify(d.debug)}` : ''
+                        setRenewMsg(`${d.error || 'Gagal buat pembayaran'} (HTTP ${res.status})${dbg}`)
+                        console.error('[renew paid ns]', res.status, d)
+                      }
+                    } catch (e: any) {
+                      setRenewMsg('Network error: ' + (e?.message || e))
                     } finally {
                       setRenewLoading(false)
                     }
@@ -708,9 +718,13 @@ export default function DashboardPage() {
             </div>
 
             {renewMsg && (
-              <p className={`text-sm ${renewMsg.includes('Gagal') || renewMsg.includes('error') || renewMsg.includes('tidak') ? 'text-red-500' : 'text-green-600'}`}>
+              <pre className={`text-xs whitespace-pre-wrap break-all rounded p-2 ${
+                /gagal|error|tidak|missing|HTTP 5|HTTP 4/i.test(renewMsg)
+                  ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                  : 'text-green-600 bg-green-50 dark:bg-green-900/20'
+              }`}>
                 {renewMsg}
-              </p>
+              </pre>
             )}
           </div>
         )}

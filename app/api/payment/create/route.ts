@@ -5,49 +5,94 @@ import { generateInvoiceNumber } from '@/lib/invoice'
 import { createSubdomainRenewalOrder } from '@/lib/paywuz'
 
 async function createPayment(userId: string, subdomainId: string, nsAddon: boolean) {
-  const db = await getDB()
-  const subdomain = await db.prepare(
-    'SELECT * FROM subdomains WHERE id = ? AND user_id = ?'
-  ).bind(subdomainId, userId).first() as Record<string, unknown> | null
-
-  if (!subdomain) return NextResponse.json({ error: 'Subdomain not found' }, { status: 404 })
-
-  const BASE_PRICE = 5000
-  const NS_ADDON_PRICE = 1000
-  const amount = nsAddon ? BASE_PRICE + NS_ADDON_PRICE : BASE_PRICE
-
-  const orderId = `tepi-${subdomainId}-${Date.now()}`
-  const invoiceNumber = generateInvoiceNumber()
-
-  await db.prepare(
-    `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).bind(userId, subdomainId, orderId, invoiceNumber, amount, BASE_PRICE, nsAddon ? NS_ADDON_PRICE : 0).run()
-
+  const steps: string[] = []
   try {
+    steps.push('check-key')
+    if (!process.env.PAYWUZ_API_KEY) {
+      return NextResponse.json({
+        error: 'Pembayaran belum dikonfigurasi (PAYWUZ_API_KEY kosong)',
+        debug: { steps },
+      }, { status: 500 })
+    }
+
+    steps.push('db')
+    const db = await getDB()
+    const subdomain = await db.prepare(
+      'SELECT * FROM subdomains WHERE id = ? AND user_id = ?'
+    ).bind(subdomainId, userId).first() as Record<string, unknown> | null
+
+    if (!subdomain) {
+      return NextResponse.json({ error: 'Subdomain not found', debug: { steps } }, { status: 404 })
+    }
+    steps.push('subdomain-ok:' + String(subdomain.name))
+
+    const BASE_PRICE = 5000
+    const NS_ADDON_PRICE = 1000
+    const amount = nsAddon ? BASE_PRICE + NS_ADDON_PRICE : BASE_PRICE
+    const orderId = `tepi-${subdomainId}-${Date.now()}`
+    const invoiceNumber = generateInvoiceNumber()
+    steps.push('order:' + orderId)
+
+    // Insert payment row — try full schema, fallback without ns columns
+    try {
+      await db.prepare(
+        `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
+         VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
+      ).bind(userId, subdomainId, orderId, invoiceNumber, amount, BASE_PRICE, nsAddon ? NS_ADDON_PRICE : 0).run()
+      steps.push('payment-insert-full')
+    } catch (e: any) {
+      steps.push('payment-insert-fallback:' + (e?.message || e))
+      await db.prepare(
+        `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')`
+      ).bind(userId, subdomainId, orderId, invoiceNumber, amount).run()
+      steps.push('payment-insert-basic')
+    }
+
+    steps.push('paywuz-create')
     const result = await createSubdomainRenewalOrder({
       subdomainId: Number(subdomainId),
       subdomainName: subdomain.name as string,
       userId,
       amount,
-      description: nsAddon ? `Renewal + NS Add-on (${subdomain.name}.tepi.my.id)` : `Renewal (${subdomain.name}.tepi.my.id)`,
+      description: nsAddon
+        ? `Renewal + NS Add-on (${subdomain.name}.tepi.my.id)`
+        : `Renewal (${subdomain.name}.tepi.my.id)`,
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      console.error('[payment/create] Paywuz fail', result.error, steps)
+      return NextResponse.json({
+        error: result.error || 'Paywuz gagal membuat transaksi',
+        debug: { steps, provider: 'paywuz' },
+      }, { status: 500 })
+    }
+
+    steps.push('ok')
+    const payUrl = result.data.paymentUrl
+    if (!payUrl) {
+      return NextResponse.json({
+        error: 'Paywuz tidak mengembalikan paymentUrl',
+        debug: { steps, tx: result.data },
+      }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      checkout_url: result.data.paymentUrl,
-      qr_url: result.data.paymentUrl,
+      checkout_url: payUrl,
+      qr_url: payUrl,
       qr_image: result.data.paymentNumber,
       order_id: orderId,
       invoice_number: invoiceNumber,
       expires_at: result.data.expiresAt,
+      debug: { steps },
     })
-  } catch {
-    return NextResponse.json({ error: 'Gagal membuat pembayaran. Coba lagi.' }, { status: 500 })
+  } catch (err: any) {
+    console.error('[payment/create] Unhandled', err?.message, err?.stack, steps)
+    return NextResponse.json({
+      error: err?.message || 'Gagal membuat pembayaran. Coba lagi.',
+      debug: { steps, stack: err?.stack?.split('\n').slice(0, 4) },
+    }, { status: 500 })
   }
 }
 
