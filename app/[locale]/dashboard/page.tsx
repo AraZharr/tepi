@@ -82,9 +82,20 @@ export default function DashboardPage() {
         fetchData()
       })
       .catch(() => {
-        // Session check failed, redirect to login
         router.push('/login')
       })
+
+    // Return from Paywuz redirectUrl
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      if (sp.get('payment') === 'success') {
+        setRenewMsg('Pembayaran diterima. Kalau plan belum update, tunggu webhook / refresh 10 detik.')
+        // strip query
+        window.history.replaceState({}, '', window.location.pathname)
+        setTimeout(() => fetchData(), 3000)
+        setTimeout(() => fetchData(), 10000)
+      }
+    }
   }, [])
 
   async function fetchData() {

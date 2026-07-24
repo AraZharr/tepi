@@ -45,7 +45,22 @@ export async function POST(req: NextRequest) {
             errors.push({ id: sub.id, error: 'Hanya subdomain paid yang bisa diperpanjang' })
             continue
           }
-          const { orderId, paymentUrl } = await createSubdomainRenewalOrder(sub.id, sub.ns_addon === 1)
+          const nsAddon = sub.ns_addon === 1
+          const amount = nsAddon ? 6000 : 5000
+          const orderId = `tepi-${sub.id}-${Date.now()}`
+          try {
+            await db.prepare(
+              `INSERT INTO payments (user_id, subdomain_id, order_id, amount, status) VALUES (?, ?, ?, ?, 'pending')`
+            ).bind(sub.user_id, sub.id, orderId, amount).run()
+          } catch { /* ignore insert fail */ }
+          const result = await createSubdomainRenewalOrder({
+            subdomainId: Number(sub.id),
+            subdomainName: sub.name,
+            userId: sub.user_id,
+            amount,
+            orderId,
+          })
+          if (!result.success) throw new Error(result.error)
           successCount++
           break
         }

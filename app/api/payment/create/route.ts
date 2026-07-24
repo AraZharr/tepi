@@ -98,6 +98,7 @@ async function createPayment(userId: string, subdomainId: string, nsAddon: boole
       subdomainName: subdomain.name as string,
       userId,
       amount,
+      orderId, // MUST match payments.order_id
       description: nsAddon
         ? `Renewal + NS Add-on (${subdomain.name}.tepi.my.id)`
         : `Renewal (${subdomain.name}.tepi.my.id)`,

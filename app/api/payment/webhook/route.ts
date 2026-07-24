@@ -1,39 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDB } from '@/lib/db'
 import { verifyWebhookSignature } from '@/lib/paywuz'
-import { sendEmail } from '@/lib/email'
+import { sendEmail, emailPaymentSuccess } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
+import { notifPaymentSuccess } from '@/lib/admin-notif'
 import { dispatchWebhook } from '@/lib/webhooks'
 
+/**
+ * Paywuz webhook (canonical)
+ * URL di dashboard Paywuz: https://tepi.my.id/api/payment/webhook
+ *
+ * Payload resmi (docs paywuz):
+ * { event: 'transaction.paid'|'transaction.failed'|'transaction.cancelled',
+ *   data: { id, orderId, amount, status: 'success'|..., paidAt, ... }, timestamp }
+ */
 export async function POST(req: NextRequest) {
   try {
-    // Get raw body for signature verification
     const rawBody = await req.text()
-    const signature = req.headers.get('X-Paywuz-Signature')
+    const signature = req.headers.get('X-Paywuz-Signature') || req.headers.get('x-paywuz-signature')
 
-    if (!await verifyWebhookSignature(rawBody, signature)) {
+    if (!(await verifyWebhookSignature(rawBody, signature))) {
       console.error('[Paywuz Webhook] Invalid signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
     const payload = JSON.parse(rawBody)
-    console.log('[Paywuz Webhook] Received:', payload.event, payload.data.orderId)
+    console.log('[Paywuz Webhook] Received:', payload.event || payload.status, payload.data?.orderId || payload.orderId || payload.order_id)
 
-    const { event, data } = payload
-    const { orderId, amount, status, paidAt } = data
+    // Support both nested {event,data} and flat body
+    const event = payload.event as string | undefined
+    const data = payload.data || payload
+    const orderId = data.orderId || data.order_id || payload.orderId || payload.order_id
+    const amount = Number(data.amount ?? payload.amount ?? 0)
+    const statusRaw = String(data.status || payload.status || '').toLowerCase()
+    const paidAt = data.paidAt || data.paid_at || null
+    const fee = Number(data.fee ?? 0)
+    const paymentMethod = data.paymentMethod || data.payment_method || 'QRIS'
+    const txId = data.id || payload.id || null
 
-    // Parse orderId: tepi-{subdomainId}-{timestamp}
-    const match = orderId.match(/^tepi-(\d+)-\d+$/)
+    if (!orderId) {
+      return NextResponse.json({ error: 'orderId required' }, { status: 400 })
+    }
+
+    const match = String(orderId).match(/^tepi-(\d+)-\d+$/)
     if (!match) {
       console.error('[Paywuz Webhook] Invalid orderId format:', orderId)
       return NextResponse.json({ error: 'Invalid orderId' }, { status: 400 })
     }
-
     const subdomainId = parseInt(match[1], 10)
     const db = await getDB()
 
-    if (event === 'transaction.paid' && status === 'paid') {
-      // Get subdomain info
+    const isPaidEvent =
+      event === 'transaction.paid' ||
+      statusRaw === 'success' ||
+      statusRaw === 'paid' ||
+      statusRaw === 'settlement'
+
+    const isFailEvent =
+      event === 'transaction.failed' ||
+      event === 'transaction.cancelled' ||
+      statusRaw === 'failed' ||
+      statusRaw === 'cancelled'
+
+    if (isPaidEvent) {
       const subdomain = await db.prepare(
         'SELECT * FROM subdomains WHERE id = ?'
       ).bind(subdomainId).first() as Record<string, unknown> | null
@@ -43,108 +72,119 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Subdomain not found' }, { status: 404 })
       }
 
-      // Get payment record to know if NS add-on was included
       const payment = await db.prepare(
         'SELECT * FROM payments WHERE order_id = ?'
       ).bind(orderId).first() as Record<string, unknown> | null
 
-      const isNSAddon = payment && (payment.ns_addon_amount as number) > 0
-      const baseAmount = payment ? (payment.base_amount as number) : 5000
+      const isNSAddon = !!(payment && Number(payment.ns_addon_amount || 0) > 0)
+      const baseAmount = payment ? Number(payment.base_amount || amount || 5000) : (amount || 5000)
 
-      if (subdomain.plan === 'paid' && subdomain.expires_at) {
-        // Already paid - extend 1 year from current expiry
-        const currentExpiry = new Date((subdomain.expires_at as string).replace(' ', 'T') + 'Z')
-        const newExpiry = new Date(currentExpiry.getTime() + 365 * 86400000)
-        const expiresAt = newExpiry.toISOString().replace('T', ' ').replace(/\..*/, '')
+      // Extend expiry: from max(now, current expiry) + 365d
+      let baseDate = new Date()
+      if (subdomain.expires_at) {
+        const cur = new Date(String(subdomain.expires_at).replace(' ', 'T') + (String(subdomain.expires_at).includes('Z') ? '' : 'Z'))
+        if (!Number.isNaN(cur.getTime()) && cur > baseDate) baseDate = cur
+      }
+      const newExpiry = new Date(baseDate.getTime() + 365 * 86400000)
+      const expiresAt = newExpiry.toISOString().replace('T', ' ').replace(/\..*/, '')
 
+      await db.prepare(
+        `UPDATE subdomains SET plan = 'paid', status = 'active', expires_at = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(expiresAt, subdomainId).run()
+
+      // Update payment (ignore missing optional columns)
+      try {
         await db.prepare(
-          'UPDATE subdomains SET expires_at = ?, updated_at = datetime("now") WHERE id = ?'
-        ).bind(expiresAt, subdomainId).run()
-      } else {
-        // First time paid
-        const expiresAt = new Date(Date.now() + 365 * 86400000)
-          .toISOString().replace('T', ' ').replace(/\..*/, '')
-
+          `UPDATE payments SET
+            status = 'success',
+            paid_at = COALESCE(?, datetime('now')),
+            paywuz_transaction_id = COALESCE(?, paywuz_transaction_id),
+            fee = COALESCE(?, fee),
+            total_payment = COALESCE(?, total_payment),
+            payment_method = COALESCE(?, payment_method)
+           WHERE order_id = ?`
+        ).bind(paidAt, txId, fee || null, amount || null, paymentMethod, orderId).run()
+      } catch (e: any) {
+        console.error('[Paywuz Webhook] payment update fallback', e?.message)
         await db.prepare(
-          'UPDATE subdomains SET plan = ?, expires_at = ?, auto_renew = 1, updated_at = datetime("now") WHERE id = ?'
-        ).bind('paid', expiresAt, subdomainId).run()
+          `UPDATE payments SET status = 'success' WHERE order_id = ?`
+        ).bind(orderId).run()
       }
 
-      // Update payment record with receipt info
-      const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/billing/receipt/${orderId}`
-      await db.prepare(
-        `UPDATE payments SET 
-          status = 'paid', 
-          paid_at = datetime("now"), 
-          base_amount = ?, 
-          ns_addon_amount = ?,
-          receipt_sent = 1,
-          receipt_url = ?
-         WHERE order_id = ?`
-      ).bind(baseAmount, isNSAddon ? 1000 : 0, receiptUrl, orderId).run()
-
-      // Get user for notification
       const user = await db.prepare(
-        'SELECT email, full_name FROM users WHERE id = ?'
-      ).bind(subdomain.user_id).first() as { email: string; full_name: string } | null
+        'SELECT id, email, full_name FROM users WHERE id = ?'
+      ).bind(subdomain.user_id).first() as { id: string; email: string; full_name: string } | null
 
       if (user) {
-        // Send email notification
         try {
-          await sendEmail({
-            to: user.email,
-            subject: 'Pembayaran Berhasil - Subdomain Aktif 1 Tahun',
-            html: `
-              <p>Halo ${user.full_name || user.email},</p>
-              <p>Pembayaran untuk <strong>${subdomain.name}.tepi.my.id</strong> telah dikonfirmasi.</p>
-              <p>Subdomain kamu sekarang <strong>Paid</strong> dan aktif hingga <strong>${new Date(subdomain.expires_at as string).toLocaleDateString('id-ID')}</strong>.</p>
-              <p><a href="${receiptUrl}">Unduh Invoice/Receipt</a></p>
-              <p>Terima kasih telah menggunakan tepi.my.id!</p>
-            `
-          })
-        } catch (e) { console.error('[Webhook] Email failed:', e) }
+          const tpl = emailPaymentSuccess(
+            user.full_name || user.email,
+            subdomain.name as string,
+            expiresAt
+          )
+          await sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html })
+        } catch (e) {
+          console.error('[Webhook] Email failed:', e)
+        }
 
-        // In-app notification
         await createNotification(
-          subdomain.user_id as string,
+          user.id,
           'payment_confirmed',
           'Pembayaran Dikonfirmasi',
-          `Subdomain ${subdomain.name}.tepi.my.id sekarang Paid (1 tahun)`,
+          `Subdomain ${subdomain.name}.tepi.my.id sekarang Paid hingga ${expiresAt}`,
           '/dashboard'
         )
       }
 
-      // Log activity
-      await db.prepare(
-        `INSERT INTO activity_logs (user_id, action, detail) VALUES (?, 'payment_paid', ?)`
-      ).bind(subdomain.user_id, JSON.stringify({ subdomainId, orderId, amount, nsAddon: isNSAddon })).run()
+      try {
+        await db.prepare(
+          `INSERT INTO activity_logs (user_id, action, detail) VALUES (?, 'payment_paid', ?)`
+        ).bind(
+          subdomain.user_id,
+          JSON.stringify({ subdomainId, orderId, amount, nsAddon: isNSAddon, expiresAt })
+        ).run()
+      } catch { /* optional */ }
 
-      // Dispatch webhook
-      await dispatchWebhook(subdomain.user_id as string, 'payment.paid', {
-        subdomainId,
-        subdomainName: subdomain.name,
-        orderId,
-        amount,
-        nsAddon: isNSAddon,
-        expiresAt: subdomain.expires_at,
-      })
+      try {
+        await dispatchWebhook(subdomain.user_id as string, 'payment.paid', {
+          subdomainId,
+          subdomainName: subdomain.name,
+          orderId,
+          amount,
+          nsAddon: isNSAddon,
+          expiresAt,
+        })
+      } catch { /* optional */ }
 
-      console.log('[Paywuz Webhook] Payment processed for subdomain:', subdomainId)
+      try {
+        notifPaymentSuccess(
+          `${subdomain.name}.tepi.my.id`,
+          user?.full_name || user?.email || 'User',
+          amount || baseAmount,
+          (payment?.invoice_number as string) || orderId,
+          expiresAt
+        )
+      } catch { /* optional */ }
+
+      console.log('[Paywuz Webhook] Payment processed subdomain', subdomainId, 'expires', expiresAt)
+      return NextResponse.json({ received: true, plan: 'paid', expires_at: expiresAt })
     }
 
-    else if (event === 'transaction.failed' || event === 'transaction.cancelled') {
-      // Update payment record
-      await db.prepare(
-        `UPDATE payments SET status = ? WHERE order_id = ?`
-      ).bind(event === 'transaction.failed' ? 'failed' : 'cancelled', orderId).run()
-
-      console.log('[Paywuz Webhook] Transaction failed/cancelled:', orderId)
+    if (isFailEvent) {
+      try {
+        await db.prepare(
+          `UPDATE payments SET status = ? WHERE order_id = ?`
+        ).bind(
+          event === 'transaction.cancelled' || statusRaw === 'cancelled' ? 'cancelled' : 'failed',
+          orderId
+        ).run()
+      } catch { /* ignore */ }
+      return NextResponse.json({ received: true })
     }
 
-    return NextResponse.json({ received: true })
-
+    return NextResponse.json({ received: true, ignored: true })
   } catch (error: any) {
     console.error('[Paywuz Webhook] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error', detail: error?.message }, { status: 500 })
   }
 }

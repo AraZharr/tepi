@@ -116,8 +116,7 @@ export async function createTransaction(
 
 /**
  * Shortcut untuk plan berbayar tepi.my.id — Rp5.000/tahun via QRIS.
- * orderId disertai timestamp supaya percobaan bayar ulang untuk subdomain
- * yang sama tidak bentrok dengan order lama yang sudah kedaluwarsa.
+ * orderId HARUS sama dengan row payments di D1 (caller generate).
  */
 export async function createSubdomainRenewalOrder(params: {
   subdomainId: number
@@ -125,18 +124,24 @@ export async function createSubdomainRenewalOrder(params: {
   userId: string
   amount?: number
   description?: string
+  orderId?: string
+  redirectUrl?: string
 }): Promise<Result<Transaction>> {
-  const orderId = `tepi-${params.subdomainId}-${Date.now()}`
+  const orderId = params.orderId || `tepi-${params.subdomainId}-${Date.now()}`
   const amount = params.amount || 5000
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://tepi.my.id'
+  const redirectUrl = params.redirectUrl || `${base}/dashboard?payment=success&order=${encodeURIComponent(orderId)}`
 
   return createTransaction({
     orderId,
     amount,
     paymentMethod: 'QRIS',
+    redirectUrl,
     metadata: {
       subdomainId: params.subdomainId,
       subdomainName: params.subdomainName,
       userId: params.userId,
+      description: params.description,
     },
   })
 }

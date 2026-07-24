@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 import { getDB } from '@/lib/db'
 import { createSubdomainRenewalOrder } from '@/lib/paywuz'
+import { generateInvoiceNumber } from '@/lib/invoice'
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser()
@@ -13,15 +14,11 @@ export async function POST(req: NextRequest) {
   if (!action || !Array.isArray(subdomainIds) || subdomainIds.length === 0) {
     return NextResponse.json({ error: 'Action dan subdomainIds wajib diisi' }, { status: 400 })
   }
-
-  const validActions = ['renew']
-  if (!validActions.includes(action)) {
+  if (action !== 'renew') {
     return NextResponse.json({ error: 'Action tidak valid' }, { status: 400 })
   }
 
   const db = await getDB()
-
-  // Fetch subdomains and verify ownership
   const placeholders = subdomainIds.map(() => '?').join(',')
   const subs = await db.prepare(
     `SELECT * FROM subdomains WHERE id IN (${placeholders}) AND user_id = ?`
@@ -31,25 +28,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subdomain tidak ditemukan' }, { status: 404 })
   }
 
-  const results: Array<{ id: number; success: boolean; error?: string; orderId?: string }> = []
+  const results: Array<{ id: number; success: boolean; error?: string; orderId?: string; paymentUrl?: string }> = []
 
   for (const sub of subs.results as any[]) {
     try {
-      if (action === 'renew') {
-        if (sub.plan !== 'paid') {
-          results.push({ id: sub.id, success: false, error: 'Hanya subdomain paid yang bisa diperpanjang' })
-          continue
-        }
-
-        // Create renewal payment order
-        const { orderId, paymentUrl } = await createSubdomainRenewalOrder(sub.id, sub.ns_addon === 1)
-        results.push({ id: sub.id, success: true, orderId, paymentUrl })
+      if (sub.plan !== 'paid') {
+        results.push({ id: sub.id, success: false, error: 'Hanya subdomain paid yang bisa bulk renew' })
+        continue
       }
+      const nsAddon = sub.ns_addon === 1
+      const amount = nsAddon ? 6000 : 5000
+      const orderId = `tepi-${sub.id}-${Date.now()}`
+      const invoiceNumber = generateInvoiceNumber()
+      try {
+        await db.prepare(
+          `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
+           VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
+        ).bind(user.id, sub.id, orderId, invoiceNumber, amount, 5000, nsAddon ? 1000 : 0).run()
+      } catch {
+        await db.prepare(
+          `INSERT INTO payments (user_id, subdomain_id, order_id, amount, status) VALUES (?, ?, ?, ?, 'pending')`
+        ).bind(user.id, sub.id, orderId, amount).run()
+      }
+      const result = await createSubdomainRenewalOrder({
+        subdomainId: Number(sub.id),
+        subdomainName: sub.name,
+        userId: user.id,
+        amount,
+        orderId,
+      })
+      if (!result.success) {
+        results.push({ id: sub.id, success: false, error: result.error })
+        continue
+      }
+      results.push({ id: sub.id, success: true, orderId, paymentUrl: result.data.paymentUrl })
     } catch (err: any) {
       results.push({ id: sub.id, success: false, error: err.message })
     }
   }
 
-  const successCount = results.filter(r => r.success).length
-  return NextResponse.json({ results, successCount })
+  return NextResponse.json({ results, successCount: results.filter(r => r.success).length })
 }

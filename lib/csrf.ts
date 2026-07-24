@@ -8,6 +8,7 @@ const CSRF_EXEMPT = [
   '/api/auth',
   '/api/auth/otp',
   '/api/webhook/',
+  '/api/payment/webhook',
   '/api/contact',
   '/api/abuse',
   '/api/chat',
