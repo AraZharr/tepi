@@ -663,12 +663,17 @@ export default function DashboardPage() {
                     setRenewLoading(true)
                     setRenewMsg(null)
                     try {
-                      const res = await csrfFetch('/api/payment/create', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: false }),
-                      })
-                      const d = await res.json()
+                      // GET = no CSRF (same as billing page); returns JSON checkout_url
+                      const res = await fetch(
+                        `/api/payment/create?subdomain_id=${encodeURIComponent(renewalModal.subdomain.id)}&ns_addon=0`,
+                        { credentials: 'include' }
+                      )
+                      const text = await res.text()
+                      let d: any = {}
+                      try { d = text ? JSON.parse(text) : {} } catch {
+                        setRenewMsg(`Invalid response (HTTP ${res.status}): ${text.slice(0, 200)}`)
+                        return
+                      }
                       if (d.checkout_url || d.qr_url) {
                         window.location.href = d.checkout_url || d.qr_url
                       } else {
@@ -677,7 +682,7 @@ export default function DashboardPage() {
                         console.error('[renew paid base]', res.status, d)
                       }
                     } catch (e: any) {
-                      setRenewMsg('Network error: ' + (e?.message || e))
+                      setRenewMsg('Network error: ' + (e?.message || String(e)))
                     } finally {
                       setRenewLoading(false)
                     }
@@ -692,12 +697,16 @@ export default function DashboardPage() {
                     setRenewLoading(true)
                     setRenewMsg(null)
                     try {
-                      const res = await csrfFetch('/api/payment/create', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ subdomain_id: renewalModal.subdomain.id, ns_addon: true }),
-                      })
-                      const d = await res.json()
+                      const res = await fetch(
+                        `/api/payment/create?subdomain_id=${encodeURIComponent(renewalModal.subdomain.id)}&ns_addon=1`,
+                        { credentials: 'include' }
+                      )
+                      const text = await res.text()
+                      let d: any = {}
+                      try { d = text ? JSON.parse(text) : {} } catch {
+                        setRenewMsg(`Invalid response (HTTP ${res.status}): ${text.slice(0, 200)}`)
+                        return
+                      }
                       if (d.checkout_url || d.qr_url) {
                         window.location.href = d.checkout_url || d.qr_url
                       } else {
@@ -706,7 +715,7 @@ export default function DashboardPage() {
                         console.error('[renew paid ns]', res.status, d)
                       }
                     } catch (e: any) {
-                      setRenewMsg('Network error: ' + (e?.message || e))
+                      setRenewMsg('Network error: ' + (e?.message || String(e)))
                     } finally {
                       setRenewLoading(false)
                     }

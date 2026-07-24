@@ -8,15 +8,22 @@ export function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-/** fetch wrapper — inject X-CSRF-Token for mutating methods. */
+/** fetch wrapper — inject X-CSRF-Token for mutating methods. Always credentials. */
 export async function csrfFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const method = (init.method || 'GET').toUpperCase()
   const headers = new Headers(init.headers)
 
   if (method !== 'GET' && method !== 'HEAD') {
-    const token = getCsrfToken()
+    let token = getCsrfToken()
+    // Cookie belum ada (tab baru) — seed via GET /api/auth dulu
+    if (!token) {
+      try {
+        await fetch('/api/auth', { credentials: 'include' })
+        token = getCsrfToken()
+      } catch { /* ignore */ }
+    }
     if (token) headers.set(CSRF_HEADER, token)
   }
 
-  return fetch(input, { ...init, headers })
+  return fetch(input, { ...init, headers, credentials: 'include' })
 }

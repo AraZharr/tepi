@@ -23,7 +23,7 @@ export function generateCsrfToken(): string {
 export function csrfCookieOptions(maxAge = 60 * 60 * 24 * 30) {
   return {
     httpOnly: false, // double-submit: JS must read + send as header
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // always HTTPS on tepi.my.id
     sameSite: 'lax' as const,
     path: '/',
     maxAge,
