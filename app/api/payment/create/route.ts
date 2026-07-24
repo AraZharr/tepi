@@ -4,6 +4,55 @@ import { getDB } from '@/lib/db'
 import { generateInvoiceNumber } from '@/lib/invoice'
 import { createSubdomainRenewalOrder } from '@/lib/paywuz'
 
+async function insertPayment(
+  db: Awaited<ReturnType<typeof getDB>>,
+  row: {
+    userId: string
+    subdomainId: string
+    orderId: string
+    invoiceNumber: string
+    amount: number
+    base: number
+    ns: number
+  },
+  steps: string[]
+) {
+  // Try richest → leanest column sets until one works (prod schema drift)
+  const attempts: Array<{ label: string; sql: string; binds: unknown[] }> = [
+    {
+      label: 'full',
+      sql: `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+      binds: [row.userId, row.subdomainId, row.orderId, row.invoiceNumber, row.amount, row.base, row.ns],
+    },
+    {
+      label: 'with-invoice',
+      sql: `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status)
+            VALUES (?, ?, ?, ?, ?, 'pending')`,
+      binds: [row.userId, row.subdomainId, row.orderId, row.invoiceNumber, row.amount],
+    },
+    {
+      label: 'minimal',
+      sql: `INSERT INTO payments (user_id, subdomain_id, order_id, amount, status)
+            VALUES (?, ?, ?, ?, 'pending')`,
+      binds: [row.userId, row.subdomainId, row.orderId, row.amount],
+    },
+  ]
+
+  let lastErr: unknown
+  for (const a of attempts) {
+    try {
+      await db.prepare(a.sql).bind(...a.binds).run()
+      steps.push('payment-insert:' + a.label)
+      return
+    } catch (e) {
+      lastErr = e
+      steps.push('payment-insert-fail:' + a.label + ':' + ((e as Error)?.message || e))
+    }
+  }
+  throw lastErr
+}
+
 async function createPayment(userId: string, subdomainId: string, nsAddon: boolean) {
   const steps: string[] = []
   try {
@@ -33,21 +82,15 @@ async function createPayment(userId: string, subdomainId: string, nsAddon: boole
     const invoiceNumber = generateInvoiceNumber()
     steps.push('order:' + orderId)
 
-    // Insert payment row — try full schema, fallback without ns columns
-    try {
-      await db.prepare(
-        `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status, base_amount, ns_addon_amount)
-         VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-      ).bind(userId, subdomainId, orderId, invoiceNumber, amount, BASE_PRICE, nsAddon ? NS_ADDON_PRICE : 0).run()
-      steps.push('payment-insert-full')
-    } catch (e: any) {
-      steps.push('payment-insert-fallback:' + (e?.message || e))
-      await db.prepare(
-        `INSERT INTO payments (user_id, subdomain_id, order_id, invoice_number, amount, status)
-         VALUES (?, ?, ?, ?, ?, 'pending')`
-      ).bind(userId, subdomainId, orderId, invoiceNumber, amount).run()
-      steps.push('payment-insert-basic')
-    }
+    await insertPayment(db, {
+      userId,
+      subdomainId,
+      orderId,
+      invoiceNumber,
+      amount,
+      base: BASE_PRICE,
+      ns: nsAddon ? NS_ADDON_PRICE : 0,
+    }, steps)
 
     steps.push('paywuz-create')
     const result = await createSubdomainRenewalOrder({
